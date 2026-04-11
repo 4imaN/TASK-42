@@ -1,7 +1,7 @@
 # Static Audit Fix Verification
 
 ## Verdict
-- Overall status: `Mostly Fixed`
+- Overall status: `Fixed`
 - Boundary: static review only. I did not start the app, run tests, use Docker, or verify browser/runtime behavior.
 
 ## Issue-by-Issue Status
