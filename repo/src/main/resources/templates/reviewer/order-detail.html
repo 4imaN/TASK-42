@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Review Order</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Reviewer / Orders</span>
+            <h1 class="page-title" th:text="'Review Order #' + ${order.id}">Review Order</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/reviewer/queue}" class="btn btn-secondary">&larr; Queue</a>
+        </div>
+    </div>
+
+    <div id="actionAlert" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+    <div id="actionSuccess" class="alert alert-success hidden" role="status" aria-live="polite"></div>
+
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; align-items:start;">
+
+        <!-- Left: order info + items with category adjustment -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <!-- Order info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Order Info</span>
+                    <span class="badge"
+                          th:classappend="'badge-' + ${order.orderStatus.toLowerCase()}"
+                          th:text="${order.orderStatus}">STATUS</span>
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                        <div>
+                            <div class="form-label">Customer ID</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${order.userId ?: '—'}">—</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Created</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}">—</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Appointment ID</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${order.appointmentId ?: '—'}">—</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Type</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${order.appointmentType ?: '—'}">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items with category adjustment -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Items &amp; Category Adjustment</span>
+                </div>
+                <div class="card-body">
+                    <ul class="item-list" th:if="${items != null and not #lists.isEmpty(items)}">
+                        <li class="item-row" th:each="item : ${items}">
+                            <div class="item-img" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="1"
+                                     style="color:var(--border-light);">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-name" th:text="${item.snapshotTitle}">Item</div>
+                                <div class="item-meta">
+                                    Original: <span th:text="${item.snapshotCategory}">Category</span>
+                                </div>
+                            </div>
+                            <div style="width:180px; flex-shrink:0;">
+                                <!-- Reviewer can override category -->
+                                <label class="form-label"
+                                       th:for="'adjCat-' + ${item.id}">Adjust Category</label>
+                                <select th:id="'adjCat-' + ${item.id}"
+                                        th:name="'adjustedCategory[' + ${item.id} + ']'"
+                                        class="item-category-adjust"
+                                        th:data-item-id="${item.id}">
+                                    <option value="">— Keep original —</option>
+                                    <option th:each="cat : ${categories}"
+                                            th:value="${cat}"
+                                            th:text="${cat}"
+                                            th:selected="${item.adjustedCategory == cat}">Cat</option>
+                                </select>
+                            </div>
+                        </li>
+                    </ul>
+                    <p th:if="${items == null or #lists.isEmpty(items)}"
+                       style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">No items.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: actions -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Actions</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:.75rem;">
+
+                    <!-- Accept (PENDING_CONFIRMATION → ACCEPTED) -->
+                    <button type="button" class="btn btn-primary w-full"
+                            th:if="${order.orderStatus == 'PENDING_CONFIRMATION'}"
+                            data-action-type="accept"
+                            th:data-order-id="${order.id}">
+                        Accept Order
+                    </button>
+
+                    <!-- Complete (ACCEPTED → COMPLETED) -->
+                    <button type="button" class="btn btn-primary w-full"
+                            th:if="${order.orderStatus == 'ACCEPTED'}"
+                            data-action-type="complete"
+                            th:data-order-id="${order.id}">
+                        Complete Order
+                    </button>
+
+                    <!-- Approve Cancel (EXCEPTION — user requested cancel within 1 hr) -->
+                    <button type="button" class="btn btn-danger w-full"
+                            th:if="${order.orderStatus == 'EXCEPTION'}"
+                            data-action-type="approve-cancel"
+                            th:data-order-id="${order.id}">
+                        Approve Cancellation
+                    </button>
+
+                    <!-- Initiate Contract -->
+                    <div th:if="${order.orderStatus == 'ACCEPTED'}"
+                         style="border:1px solid var(--border); padding:1rem;">
+                        <div class="form-label" style="margin-bottom:.5rem;">Initiate Contract</div>
+                        <select id="templateSelect" style="margin-bottom:.625rem;">
+                            <option value="">Select template version…</option>
+                            <option th:each="opt : ${templateVersionOptions}"
+                                    th:value="${opt.versionId}"
+                                    th:text="${opt.label}">Template v1</option>
+                        </select>
+                        <!-- Clause fields rendered dynamically after template selection -->
+                        <div id="clauseFieldsContainer" style="display:none; margin-bottom:.625rem;"></div>
+                        <button type="button" class="btn btn-secondary w-full"
+                                id="initiateContractBtn"
+                                th:data-order-id="${order.id}">
+                            Initiate Contract
+                        </button>
+                    </div>
+
+                    <!-- Save category adjustments -->
+                    <button type="button" class="btn btn-secondary w-full"
+                            id="saveCategoryBtn"
+                            th:data-order-id="${order.id}">
+                        Save Adjustments
+                    </button>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script th:inline="javascript">
+(function () {
+    const alertBox   = document.getElementById('actionAlert');
+    const successBox = document.getElementById('actionSuccess');
+    const orderId    = /*[[${order.id}]]*/ 0;
+
+    // Generic reviewer action helper
+    async function doAction(url, method, body) {
+        hideAlert(alertBox);
+        hideAlert(successBox);
+        try {
+            const opts = { method };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await apiFetch(url, opts);
+            if (res.ok) {
+                showAlert(successBox, 'Action completed successfully. Refreshing…', 'success');
+                setTimeout(() => location.reload(), 1500);
+                return true;
+            }
+            let msg = 'Action failed.';
+            try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+            showAlert(alertBox, msg, 'error');
+        } catch (_) {
+            showAlert(alertBox, 'Network error. Please try again.', 'error');
+        }
+        return false;
+    }
+
+    // Accept
+    document.querySelector('[data-action-type="accept"]')?.addEventListener('click', function () {
+        doAction(`/api/reviewer/orders/${orderId}/accept`, 'PUT');
+    });
+
+    // Complete
+    document.querySelector('[data-action-type="complete"]')?.addEventListener('click', function () {
+        if (confirm('Mark this order as completed?')) {
+            doAction(`/api/orders/${orderId}/complete`, 'PUT');
+        }
+    });
+
+    // Approve cancel
+    document.querySelector('[data-action-type="approve-cancel"]')?.addEventListener('click', function () {
+        var reason = prompt('Reason for approving cancellation:');
+        if (reason) {
+            doAction(`/api/reviewer/orders/${orderId}/approve-cancel`, 'PUT', {reason: reason});
+        }
+    });
+
+    // Load clause fields when template version is selected
+    const templateSelect = document.getElementById('templateSelect');
+    const clauseFieldsContainer = document.getElementById('clauseFieldsContainer');
+
+    templateSelect?.addEventListener('change', async function () {
+        const versionId = this.value;
+        if (!clauseFieldsContainer) return;
+
+        clauseFieldsContainer.innerHTML = '';
+        clauseFieldsContainer.style.display = 'none';
+
+        if (!versionId) return;
+
+        try {
+            const res = await apiFetch(`/api/contracts/templates/versions/${versionId}/fields`);
+            if (!res.ok) return;
+            const fields = await res.json(); // ContractClauseField[]
+            if (!fields || fields.length === 0) return;
+
+            clauseFieldsContainer.style.display = 'block';
+            fields.forEach(field => {
+                const group = document.createElement('div');
+                group.style.cssText = 'margin-bottom:.5rem;';
+
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.htmlFor = 'clauseField-' + field.fieldName;
+                label.textContent = (field.fieldLabel || field.fieldName) + (field.required ? ' *' : '');
+                group.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'clauseField-' + field.fieldName;
+                input.name = 'clauseField-' + field.fieldName;
+                input.dataset.fieldName = field.fieldName;
+                input.dataset.required = field.required ? 'true' : 'false';
+                input.className = 'form-control';
+                input.style.cssText = 'width:100%; box-sizing:border-box;';
+                if (field.defaultValue) input.placeholder = field.defaultValue;
+                if (field.required) input.required = true;
+                group.appendChild(input);
+
+                clauseFieldsContainer.appendChild(group);
+            });
+        } catch (_) { /* ignore — fields remain hidden */ }
+    });
+
+    // Initiate contract
+    document.getElementById('initiateContractBtn')?.addEventListener('click', function () {
+        const templateId = templateSelect?.value;
+        if (!templateId) {
+            showAlert(alertBox, 'Please select a contract template.', 'error');
+            return;
+        }
+
+        // Collect clause field values into a JSON object string
+        const fieldValues = {};
+        if (clauseFieldsContainer) {
+            clauseFieldsContainer.querySelectorAll('input[data-field-name]').forEach(input => {
+                const name = input.dataset.fieldName;
+                const val = input.value.trim();
+                if (input.dataset.required === 'true' && !val) {
+                    showAlert(alertBox,
+                        'Please fill in all required contract fields (marked with *).', 'error');
+                    input.focus();
+                    return;
+                }
+                fieldValues[name] = val;
+            });
+        }
+
+        // Check for validation errors set inside the forEach (early return check)
+        const requiredMissing = clauseFieldsContainer
+            ? Array.from(clauseFieldsContainer.querySelectorAll('input[data-required="true"]'))
+                  .some(i => !i.value.trim())
+            : false;
+        if (requiredMissing) return;
+
+        doAction(`/api/reviewer/orders/${orderId}/initiate-contract`, 'POST', {
+            templateVersionId: parseInt(templateId),
+            fieldValues: Object.keys(fieldValues).length > 0 ? JSON.stringify(fieldValues) : '',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0]
+        });
+    });
+
+    // Save category adjustments
+    document.getElementById('saveCategoryBtn')?.addEventListener('click', async function () {
+        hideAlert(alertBox);
+        hideAlert(successBox);
+
+        const adjustments = {};
+        document.querySelectorAll('.item-category-adjust').forEach(sel => {
+            if (sel.value) {
+                adjustments[sel.dataset.itemId] = sel.value;
+            }
+        });
+
+        try {
+            for (const [itemId, newCategory] of Object.entries(adjustments)) {
+                await apiFetch(`/api/reviewer/order-items/${itemId}/adjust-category`, {
+                    method: 'PUT',
+                    body: JSON.stringify({newCategory})
+                });
+            }
+            showAlert(successBox, 'Category adjustments saved.', 'success');
+        } catch (_) {
+            showAlert(alertBox, 'Network error. Please try again.', 'error');
+        }
+    });
+})();
+</script>
+</th:block>
+
+</body>
+</html>

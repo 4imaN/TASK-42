@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Welcome back</span>
+            <h1 class="page-title"
+                th:text="'Hello, ' + ${#authentication.name}">Hello, User</h1>
+        </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${orderCount ?: '0'}">0</div>
+            <div class="stat-card-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${pendingOrders ?: '0'}">0</div>
+            <div class="stat-card-label">Pending</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${completedOrders ?: '0'}">0</div>
+            <div class="stat-card-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${reviewCount ?: '0'}">0</div>
+            <div class="stat-card-label">Reviews Left</div>
+        </div>
+    </div>
+
+    <!-- Quick navigation cards -->
+    <h3 style="margin-bottom:1rem; font-size:.875rem; color:var(--muted); font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase;">
+        Quick Access
+    </h3>
+
+    <div class="quick-cards">
+
+        <a th:href="@{/user/search}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Search Items</div>
+            <div class="quick-card-desc">Browse the catalogue and find items to reclaim.</div>
+        </a>
+
+        <a th:href="@{/user/orders}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">My Orders</div>
+            <div class="quick-card-desc">Track and manage your active and past orders.</div>
+        </a>
+
+        <a th:href="@{/user/contracts}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Contracts</div>
+            <div class="quick-card-desc">Review and sign your pending contracts.</div>
+        </a>
+
+        <a th:href="@{/user/reviews}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Reviews</div>
+            <div class="quick-card-desc">Leave feedback for completed pickups.</div>
+        </a>
+
+    </div>
+
+    <!-- Recent activity (if provided) -->
+    <div th:if="${recentOrders != null and not #lists.isEmpty(recentOrders)}"
+         style="margin-top:2.5rem;">
+
+        <h3 style="margin-bottom:1rem; font-size:.875rem; color:var(--muted); font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase;">
+            Recent Orders
+        </h3>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="order : ${recentOrders}">
+                        <td th:text="${order.id}">#</td>
+                        <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd')}">&mdash;</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="'badge-' + ${order.orderStatus != null ? order.orderStatus.toLowerCase() : 'unknown'}"
+                                  th:text="${order.orderStatus}">PENDING</span>
+                        </td>
+                        <td>?</td>
+                        <td>
+                            <a th:href="@{/user/orders/{id}(id=${order.id})}"
+                               class="btn btn-secondary btn-sm">View</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en" layout:decorate="~{layouts/default}">
+<head><title>Appeal Detail</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Appeals</span>
+            <h1 class="page-title" th:text="'Appeal #' + ${appeal.id}">Appeal</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/appeals}" class="btn btn-secondary">&larr; Back</a>
+        </div>
+    </div>
+
+    <!-- Appeal info -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+            <span class="card-title">Appeal Info</span>
+            <span class="badge" th:classappend="'badge-' + ${appeal.appealStatus.toLowerCase()}"
+                  th:text="${appeal.appealStatus}">OPEN</span>
+        </div>
+        <div class="card-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div>
+                    <div class="form-label">Order</div>
+                    <a th:href="@{/user/orders/{id}(id=${appeal.orderId})}"
+                       class="mono" th:text="'#' + ${appeal.orderId}">—</a>
+                </div>
+                <div>
+                    <div class="form-label">Filed</div>
+                    <div class="mono" style="font-size:.8rem;"
+                         th:text="${#temporals.format(appeal.createdAt, 'yyyy-MM-dd')}">—</div>
+                </div>
+            </div>
+            <div style="margin-top:1rem;">
+                <div class="form-label">Reason</div>
+                <p style="white-space:pre-wrap;" th:text="${appeal.reason}">—</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evidence -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+            <span class="card-title">Evidence</span>
+        </div>
+        <div class="card-body">
+            <div th:if="${evidence != null and not #lists.isEmpty(evidence)}">
+                <div th:each="file : ${evidence}"
+                     style="display:flex; align-items:center; gap:.75rem; padding:.5rem 0; border-bottom:1px solid var(--border);">
+                    <span th:text="${file.fileName}" style="font-size:.8rem;">file</span>
+                    <a th:href="@{'/storage/' + ${file.filePath}}"
+                       class="btn btn-secondary btn-sm" target="_blank">View</a>
+                </div>
+            </div>
+            <p th:if="${evidence == null or #lists.isEmpty(evidence)}"
+               style="font-size:.75rem; color:var(--muted);">No evidence attached.</p>
+        </div>
+    </div>
+
+    <!-- Arbitration outcome -->
+    <div class="card" th:if="${outcome != null and outcome.getClass().getSimpleName() != 'LinkedHashMap'}">
+        <div class="card-header">
+            <span class="card-title">Arbitration Outcome</span>
+        </div>
+        <div class="card-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div>
+                    <div class="form-label">Outcome</div>
+                    <div class="mono" th:text="${outcome.outcome}">—</div>
+                </div>
+                <div>
+                    <div class="form-label">Decided</div>
+                    <div class="mono" th:text="${outcome.decidedAt != null ? #temporals.format(outcome.decidedAt, 'yyyy-MM-dd') : '—'}">—</div>
+                </div>
+            </div>
+            <div style="margin-top:1rem;" th:if="${outcome.reasoning != null}">
+                <div class="form-label">Reasoning</div>
+                <p style="white-space:pre-wrap;" th:text="${outcome.reasoning}">—</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

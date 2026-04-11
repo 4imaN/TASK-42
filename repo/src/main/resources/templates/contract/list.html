@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Contracts</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Legal</span>
+            <h1 class="page-title">Contracts</h1>
+        </div>
+    </div>
+
+    <!-- Status filter -->
+    <div style="display:flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+        <a th:href="@{/user/contracts}"
+           class="btn btn-sm"
+           th:classappend="${param.status == null} ? 'btn-primary' : 'btn-secondary'">All</a>
+        <a th:each="s : ${ {'INITIATED','CONFIRMED','SIGNED','ACTIVE','EXPIRING_SOON','RENEWED','TERMINATED','VOIDED','ARCHIVED'} }"
+           th:href="@{/user/contracts(status=${s})}"
+           class="btn btn-sm"
+           th:classappend="${param.status == s} ? 'btn-primary' : 'btn-secondary'"
+           th:text="${s}">STATUS</a>
+    </div>
+
+    <div class="table-wrap"
+         th:if="${contracts != null and not #lists.isEmpty(contracts)}">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract #</th>
+                    <th>Order</th>
+                    <th>Template</th>
+                    <th>Status</th>
+                    <th>Initiated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="contract : ${contracts}">
+                    <td>
+                        <a th:href="@{/user/contracts/{id}(id=${contract.id})}"
+                           class="text-amber mono"
+                           th:text="'#' + ${contract.id}">—</a>
+                    </td>
+                    <td>
+                        <a th:if="${contract.orderId != null}"
+                           th:href="@{/user/orders/{id}(id=${contract.orderId})}"
+                           th:text="'#' + ${contract.orderId}"
+                           class="mono">—</a>
+                        <span th:if="${contract.orderId == null}" class="text-muted">—</span>
+                    </td>
+                    <td th:text="${contract.templateVersionId != null ? 'v' + contract.templateVersionId : '—'}">—</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="'badge-' + ${(contract.displayStatus ?: contract.contractStatus ?: 'unknown').toLowerCase()}"
+                              th:text="${contract.displayStatus ?: contract.contractStatus}">INITIATED</span>
+                    </td>
+                    <td th:text="${#temporals.format(contract.createdAt, 'yyyy-MM-dd')}">&mdash;</td>
+                    <td>
+                        <div style="display:flex; gap:.375rem;">
+                            <a th:href="@{/user/contracts/{id}(id=${contract.id})}"
+                               class="btn btn-secondary btn-sm">View</a>
+                            <a th:if="${contract.contractStatus == 'CONFIRMED'}"
+                               th:href="@{/user/contracts/{id}/sign(id=${contract.id})}"
+                               class="btn btn-primary btn-sm">Sign</a>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:if="${contracts == null or #lists.isEmpty(contracts)}"
+         style="padding:4rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+        <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted); letter-spacing:.1em;">
+            No contracts found.
+        </p>
+    </div>
+
+
+</div>
+
+</body>
+</html>

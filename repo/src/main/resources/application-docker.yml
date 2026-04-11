@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:reclaim_portal}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USER:reclaim_user}
+    password: ${DB_PASS:reclaim_pass}
+
+  thymeleaf:
+    cache: true
+
+reclaim:
+  security:
+    jwt-secret: ${RECLAIM_JWT_SECRET}
+    refresh-secret: ${RECLAIM_REFRESH_SECRET}
+    encryption-key: ${RECLAIM_ENCRYPTION_KEY}
+    cookie-secure: ${COOKIE_SECURE:false}
+
+  storage:
+    root-path: /app/storage

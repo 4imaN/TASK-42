@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en" layout:decorate="~{layouts/default}">
+<head><title>File Appeal</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Appeals</span>
+            <h1 class="page-title">File an Appeal</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/appeals}" class="btn btn-secondary">&larr; Back</a>
+        </div>
+    </div>
+    <div style="max-width:640px;">
+        <div id="formAlert" class="alert alert-error hidden"></div>
+        <div class="card">
+            <div class="card-body">
+                <form id="appealForm" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="appealOrderId">Order ID</label>
+                        <input type="number" id="appealOrderId" th:value="${orderId}" required/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="appealReason">Reason</label>
+                        <textarea id="appealReason" rows="4" required placeholder="Describe the issue…"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Appeal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+<script>
+document.getElementById('appealForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const orderId = document.getElementById('appealOrderId').value;
+    const reason = document.getElementById('appealReason').value.trim();
+    if (!orderId || !reason) { alert('Order ID and reason are required.'); return; }
+    try {
+        const res = await apiFetch('/api/appeals', {
+            method: 'POST',
+            body: JSON.stringify({orderId: parseInt(orderId), contractId: null, reason: reason})
+        });
+        if (res.ok) { window.location.href = '/user/appeals'; return; }
+        const err = await res.json();
+        alert(err.message || 'Failed to submit appeal.');
+    } catch(_) { alert('Network error.'); }
+});
+</script>
+</th:block>
+</body>
+</html>

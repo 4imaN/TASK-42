@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Create Order</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Orders</span>
+            <h1 class="page-title">Create Order</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/orders}" class="btn btn-secondary">&larr; Back</a>
+        </div>
+    </div>
+
+    <div id="formAlert" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+
+    <form id="createOrderForm" novalidate>
+
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; align-items:start;">
+
+            <!-- Left: selected items + appointment -->
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+                <!-- Selected items -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Selected Items</span>
+                        <a th:href="@{/user/search}" class="btn btn-secondary btn-sm">+ Add Items</a>
+                    </div>
+                    <div class="card-body" style="padding-top:.5rem; padding-bottom:.5rem;">
+                        <div id="selectedItemsList"></div>
+                    </div>
+                </div>
+
+                <!-- Appointment scheduling -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Appointment</span>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Appointment type toggle -->
+                        <div class="form-group">
+                            <label class="form-label">Pickup Type</label>
+                            <div class="toggle-group" id="appointmentTypeGroup" role="group" aria-label="Appointment type">
+                                <button type="button" class="toggle-option active"
+                                        data-value="PICKUP">Pickup</button>
+                                <button type="button" class="toggle-option"
+                                        data-value="DROPOFF">Drop-off</button>
+                            </div>
+                            <input type="hidden" id="appointmentType" name="appointmentType" value="PICKUP"/>
+                        </div>
+
+                        <!-- Date picker -->
+                        <div class="form-group">
+                            <label class="form-label" for="appointmentDate">Preferred Date</label>
+                            <input type="date" id="appointmentDate" name="appointmentDate"
+                                   th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                                   th:max="${#temporals.format(#temporals.createNow().plusDays(14), 'yyyy-MM-dd')}"
+                                   required/>
+                            <span class="form-error" id="dateError"></span>
+                        </div>
+
+                        <!-- Slot grid (loaded dynamically) -->
+                        <div class="form-group">
+                            <label class="form-label">Available Slots</label>
+                            <div id="slotGrid" class="slot-grid"
+                                 aria-label="Available appointment slots" role="group">
+                                <div style="font-family:var(--mono); font-size:.7rem; color:var(--muted); padding:.5rem 0;">
+                                    Select a date to see available slots.
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedSlotId" name="appointmentId"/>
+                            <span class="form-error" id="slotError"></span>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: order summary + submit -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Summary</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:1rem;">
+
+                    <div style="font-family:var(--mono); font-size:.75rem; color:var(--text-2);">
+                        <div style="display:flex; justify-content:space-between; padding:.375rem 0; border-bottom:1px solid var(--border);">
+                            <span>Items</span>
+                            <span id="summaryItems">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:.375rem 0; border-bottom:1px solid var(--border);">
+                            <span>Pickup type</span>
+                            <span id="summaryType">Pickup</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:.375rem 0;">
+                            <span>Selected slot</span>
+                            <span id="summarySlot" style="color:var(--muted);">None</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-full"
+                            id="submitOrderBtn"
+                            disabled>
+                        <span id="submitLabel">Place Order</span>
+                        <span class="btn-spinner hidden" id="submitSpinner" aria-hidden="true"></span>
+                    </button>
+
+                    <p style="font-family:var(--mono); font-size:.625rem; color:var(--muted); text-align:center; line-height:1.5;">
+                        By placing an order you agree to the ReClaim terms of service.
+                    </p>
+
+                </div>
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+// Load selected items from sessionStorage
+(function() {
+    const selected = JSON.parse(sessionStorage.getItem('selectedItems') || '[]');
+    const listEl = document.getElementById('selectedItemsList');
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    if (selected.length === 0) {
+        listEl.innerHTML = '<p style="font-family:var(--mono); font-size:.7rem; color:var(--muted); padding:.5rem 0;">No items selected. Go to <a href="/user/search">Search</a> to find items.</p>';
+        document.getElementById('submitOrderBtn').disabled = true;
+    } else {
+        listEl.innerHTML = selected.map(item =>
+            '<div style="display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid var(--border);">' +
+            '<div><div style="font-size:.8rem;">' + escHtml(item.title) + '</div>' +
+            '<div style="font-size:.7rem; color:var(--muted);">' + escHtml(item.category || '') + '</div></div>' +
+            '<div style="font-size:.8rem; font-weight:500;">$' + (parseFloat(item.price) || 0).toFixed(2) + '</div>' +
+            '<input type="hidden" name="itemIds" value="' + item.id + '"/>' +
+            '</div>'
+        ).join('');
+        document.getElementById('submitOrderBtn').disabled = false;
+    }
+    const summaryItems = document.getElementById('summaryItems');
+    if (summaryItems) summaryItems.textContent = selected.length;
+})();
+</script>
+
+<script>
+(function () {
+    // Sync type toggle to hidden field + summary
+    const typeGroup   = document.getElementById('appointmentTypeGroup');
+    const typeField   = document.getElementById('appointmentType');
+    const summaryType = document.getElementById('summaryType');
+    const summarySlot = document.getElementById('summarySlot');
+
+    if (typeGroup) {
+        typeGroup.querySelectorAll('.toggle-option').forEach(btn => {
+            btn.addEventListener('click', function () {
+                typeGroup.querySelectorAll('.toggle-option').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                typeField.value = this.dataset.value;
+                summaryType.textContent = this.textContent.trim();
+            });
+        });
+    }
+
+    // Update summary when slot selected
+    document.getElementById('slotGrid')?.addEventListener('click', function (e) {
+        const slot = e.target.closest('.slot-item.slot-selected');
+        if (slot) summarySlot.textContent = slot.textContent.trim();
+    });
+
+    // Form submit
+    document.getElementById('createOrderForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const alertBox = document.getElementById('formAlert');
+        hideAlert(alertBox);
+
+        const appointmentId = document.getElementById('selectedSlotId')?.value;
+        const date   = document.getElementById('appointmentDate')?.value;
+
+        if (!date) {
+            showAlert(alertBox, 'Please select an appointment date.', 'error');
+            return;
+        }
+        if (!appointmentId) {
+            showAlert(alertBox, 'Please select an appointment slot.', 'error');
+            return;
+        }
+
+        const btn      = document.getElementById('submitOrderBtn');
+        const label    = document.getElementById('submitLabel');
+        const spinner  = document.getElementById('submitSpinner');
+
+        btn.disabled = true;
+        label.classList.add('hidden');
+        spinner.classList.remove('hidden');
+
+        // Collect item IDs from hidden inputs
+        const itemIds = Array.from(document.querySelectorAll('input[name="itemIds"]'))
+            .map(el => el.value);
+
+        const payload = {
+            itemIds,
+            appointmentType: document.getElementById('appointmentType')?.value,
+            appointmentId
+        };
+
+        try {
+            const res = await apiFetch('/api/orders', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                sessionStorage.removeItem('selectedItems');
+                window.location.href = '/user/orders/' + data.id;
+                return;
+            }
+
+            let msg = 'Failed to create order.';
+            try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+            showAlert(alertBox, msg, 'error');
+
+        } catch (_) {
+            showAlert(alertBox, 'Network error. Please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            label.classList.remove('hidden');
+            spinner.classList.add('hidden');
+        }
+    });
+})();
+</script>
+</th:block>
+
+</body>
+</html>

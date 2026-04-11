@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Ranking Strategies</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Admin / Search</span>
+            <h1 class="page-title">Ranking Strategies</h1>
+        </div>
+    </div>
+
+    <div id="actionAlert"   class="alert alert-error   hidden" role="alert"  aria-live="assertive"></div>
+    <div id="actionSuccess" class="alert alert-success hidden" role="status" aria-live="polite"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 380px; gap:1.5rem; align-items:start;">
+
+        <!-- Strategy list -->
+        <div>
+            <h3 style="margin-bottom:1rem; font-family:var(--mono); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);">
+                All Strategies
+            </h3>
+
+            <div th:if="${strategies != null and not #lists.isEmpty(strategies)}">
+                <div class="strategy-card"
+                     th:each="strategy : ${strategies}"
+                     th:classappend="${strategy.active} ? 'active-strategy'">
+                    <div class="strategy-info">
+                        <div class="strategy-name" th:text="${strategy.versionLabel}">Version Label</div>
+                        <div class="strategy-meta">
+                            Created <span th:text="${#temporals.format(strategy.createdAt, 'yyyy-MM-dd')}">—</span>
+                            <span th:if="${strategy.active}"
+                                  class="badge badge-completed" style="margin-left:.5rem;">ACTIVE</span>
+                        </div>
+                        <div style="margin-top:.375rem; font-family:var(--mono); font-size:.65rem; color:var(--muted);">
+                            CS: <span th:text="${strategy.creditScoreWeight}">—</span>
+                            &nbsp;PR: <span th:text="${strategy.positiveRateWeight}">—</span>
+                            &nbsp;RQ: <span th:text="${strategy.reviewQualityWeight}">—</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:.5rem; flex-shrink:0;">
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                th:classappend="${strategy.active} ? 'disabled'"
+                                th:disabled="${strategy.active}"
+                                data-action="activate-strategy"
+                                th:data-strategy-id="${strategy.id}">
+                            <span th:text="${strategy.active} ? 'Active' : 'Activate'">Activate</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${strategies == null or #lists.isEmpty(strategies)}"
+                 style="padding:2rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+                <p style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">
+                    No strategies defined yet.
+                </p>
+            </div>
+        </div>
+
+        <!-- Create new strategy form -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Create Strategy</span>
+            </div>
+            <div class="card-body">
+
+                <form id="createStrategyForm" novalidate>
+
+                    <div class="form-group">
+                        <label class="form-label" for="versionLabel">Version Label</label>
+                        <input type="text" id="versionLabel" name="versionLabel"
+                               placeholder="e.g. v2-boost" required/>
+                        <span class="form-error" id="labelError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="creditScoreWeight">Credit Score Weight</label>
+                        <input type="number" id="creditScoreWeight" name="creditScoreWeight"
+                               value="0.30" min="0" max="1" step="0.01" required/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="positiveRateWeight">Positive Rate Weight</label>
+                        <input type="number" id="positiveRateWeight" name="positiveRateWeight"
+                               value="0.40" min="0" max="1" step="0.01" required/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reviewQualityWeight">Review Quality Weight</label>
+                        <input type="number" id="reviewQualityWeight" name="reviewQualityWeight"
+                               value="0.30" min="0" max="1" step="0.01" required/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="minCreditScoreThreshold">Min Credit Score Threshold</label>
+                        <input type="number" id="minCreditScoreThreshold" name="minCreditScoreThreshold"
+                               value="0.00" min="0" step="0.01"/>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="minPositiveRateThreshold">Min Positive Rate Threshold</label>
+                        <input type="number" id="minPositiveRateThreshold" name="minPositiveRateThreshold"
+                               value="0.0000" min="0" step="0.0001"/>
+                    </div>
+
+                    <div style="display:flex; gap:.75rem; margin-top:1rem;">
+                        <button type="submit" class="btn btn-primary" id="createBtn">
+                            <span id="createLabel">Create</span>
+                            <span class="btn-spinner hidden" id="createSpinner" aria-hidden="true"></span>
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+(function () {
+    const alertBox   = document.getElementById('actionAlert');
+    const successBox = document.getElementById('actionSuccess');
+
+    // Activate strategy buttons
+    document.querySelectorAll('[data-action="activate-strategy"]').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const strategyId = this.dataset.strategyId;
+            hideAlert(alertBox);
+            hideAlert(successBox);
+            try {
+                const res = await apiFetch(`/api/admin/strategies/${strategyId}/activate`, {
+                    method: 'PUT'
+                });
+                if (res.ok) {
+                    showAlert(successBox, 'Strategy activated. Refreshing…', 'success');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    let msg = 'Failed to activate strategy.';
+                    try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                    showAlert(alertBox, msg, 'error');
+                }
+            } catch (_) {
+                showAlert(alertBox, 'Network error.', 'error');
+            }
+        });
+    });
+
+    // Create form
+    document.getElementById('createStrategyForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideAlert(alertBox);
+        hideAlert(successBox);
+
+        const versionLabel            = document.getElementById('versionLabel').value.trim();
+        const creditScoreWeight       = document.getElementById('creditScoreWeight').value;
+        const positiveRateWeight      = document.getElementById('positiveRateWeight').value;
+        const reviewQualityWeight     = document.getElementById('reviewQualityWeight').value;
+        const minCreditScoreThreshold = document.getElementById('minCreditScoreThreshold').value;
+        const minPositiveRateThreshold = document.getElementById('minPositiveRateThreshold').value;
+
+        if (!versionLabel) {
+            document.getElementById('labelError').textContent = 'Version label is required.';
+            document.getElementById('labelError').classList.add('visible');
+            return;
+        }
+        document.getElementById('labelError').classList.remove('visible');
+
+        const btn    = document.getElementById('createBtn');
+        const label  = document.getElementById('createLabel');
+        const spinner = document.getElementById('createSpinner');
+        btn.disabled = true; label.classList.add('hidden'); spinner.classList.remove('hidden');
+
+        const payload = {
+            versionLabel,
+            creditScoreWeight:        parseFloat(creditScoreWeight),
+            positiveRateWeight:       parseFloat(positiveRateWeight),
+            reviewQualityWeight:      parseFloat(reviewQualityWeight),
+            minCreditScoreThreshold:  parseFloat(minCreditScoreThreshold),
+            minPositiveRateThreshold: parseFloat(minPositiveRateThreshold)
+        };
+
+        try {
+            const res = await apiFetch('/api/admin/strategies', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                showAlert(successBox, 'Strategy created. Refreshing…', 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                let msg = 'Failed to create strategy.';
+                try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                showAlert(alertBox, msg, 'error');
+            }
+        } catch (_) {
+            showAlert(alertBox, 'Network error.', 'error');
+        } finally {
+            btn.disabled = false; label.classList.remove('hidden'); spinner.classList.add('hidden');
+        }
+    });
+})();
+</script>
+</th:block>
+
+</body>
+</html>

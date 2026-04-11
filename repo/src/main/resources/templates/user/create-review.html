@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Write a Review</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Reviews</span>
+            <h1 class="page-title">Write a Review</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/reviews}" class="btn btn-secondary">&larr; Back</a>
+        </div>
+    </div>
+
+    <div style="max-width:640px;">
+
+        <div id="formAlert" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+
+        <!-- Order context -->
+        <div class="card" style="margin-bottom:1.5rem;" th:if="${order != null}">
+            <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                <div>
+                    <div class="form-label">Order</div>
+                    <div class="mono" style="font-size:.875rem;"
+                         th:text="'#' + ${order.id}">—</div>
+                </div>
+                <div>
+                    <div class="form-label">Completed</div>
+                    <div class="mono" style="font-size:.875rem;"
+                         th:text="${#temporals.format(order.updatedAt, 'yyyy-MM-dd')}">—</div>
+                </div>
+                <span class="badge badge-completed">COMPLETED</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+
+                <form id="createReviewForm" novalidate enctype="multipart/form-data">
+
+                    <!-- Hidden order ID -->
+                    <input type="hidden" id="orderId" name="orderId"
+                           th:value="${order != null ? order.id : param.orderId}"/>
+
+                    <!-- Star rating -->
+                    <div class="form-group">
+                        <label class="form-label">Rating</label>
+                        <div class="star-rating" role="radiogroup" aria-label="Rating" id="starRating">
+                            <input type="radio" id="star5" name="rating" value="5"/>
+                            <label for="star5" aria-label="5 stars"></label>
+                            <input type="radio" id="star4" name="rating" value="4"/>
+                            <label for="star4" aria-label="4 stars"></label>
+                            <input type="radio" id="star3" name="rating" value="3"/>
+                            <label for="star3" aria-label="3 stars"></label>
+                            <input type="radio" id="star2" name="rating" value="2"/>
+                            <label for="star2" aria-label="2 stars"></label>
+                            <input type="radio" id="star1" name="rating" value="1"/>
+                            <label for="star1" aria-label="1 star"></label>
+                        </div>
+                        <span class="form-error" id="ratingError"></span>
+                    </div>
+
+                    <!-- Content textarea with char counter -->
+                    <div class="form-group">
+                        <label class="form-label" for="reviewContent">Review</label>
+                        <textarea id="reviewContent" name="content"
+                                  rows="6"
+                                  maxlength="1000"
+                                  placeholder="Describe your experience…"
+                                  required></textarea>
+                        <div class="char-counter" id="reviewCounter">0 / 1000</div>
+                        <span class="form-error" id="contentError"></span>
+                    </div>
+
+                    <!-- Image upload -->
+                    <div class="form-group">
+                        <label class="form-label">Photos (optional)</label>
+                        <div class="upload-zone" id="uploadZone" aria-label="Upload images">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="1.25"
+                                 style="color:var(--muted);" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <div class="upload-zone-text">
+                                Drag &amp; drop or click to upload<br/>
+                                JPG, PNG &middot; max 3 MB each &middot; up to 5 photos
+                            </div>
+                            <input type="file" id="imagesInput" name="images"
+                                   accept="image/jpeg,image/png"
+                                   multiple
+                                   aria-label="Select images to upload"/>
+                        </div>
+                        <div id="uploadPreviews" class="upload-previews"></div>
+                        <span class="form-error" id="uploadError"></span>
+                    </div>
+
+                    <div style="margin-top:1.5rem; display:flex; gap:.75rem;">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <span id="submitLabel">Submit Review</span>
+                            <span class="btn-spinner hidden" id="submitSpinner" aria-hidden="true"></span>
+                        </button>
+                        <a th:href="@{/user/reviews}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+(function () {
+    const form     = document.getElementById('createReviewForm');
+    const alertBox = document.getElementById('formAlert');
+    const btn      = document.getElementById('submitBtn');
+    const label    = document.getElementById('submitLabel');
+    const spinner  = document.getElementById('submitSpinner');
+
+    function setLoading(on) {
+        btn.disabled = on;
+        label.classList.toggle('hidden', on);
+        spinner.classList.toggle('hidden', !on);
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideAlert(alertBox);
+
+        const orderId = document.getElementById('orderId')?.value;
+        const rating  = document.querySelector('input[name="rating"]:checked')?.value;
+        const content = document.getElementById('reviewContent').value.trim();
+
+        if (!rating) {
+            showAlert(alertBox, 'Please select a star rating.', 'error');
+            return;
+        }
+        if (!content) {
+            showAlert(alertBox, 'Please write your review.', 'error');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Step 1: POST JSON to create the review
+            const jsonBody = {
+                rating: parseInt(rating, 10),
+                reviewText: content
+            };
+            if (orderId) jsonBody.orderId = parseInt(orderId, 10);
+
+            const res = await apiFetch('/api/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(jsonBody)
+            });
+
+            if (!res.ok) {
+                let msg = 'Failed to submit review.';
+                try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                showAlert(alertBox, msg, 'error');
+                return;
+            }
+
+            const created = await res.json();
+            const reviewId = created.id;
+
+            // Step 2: Upload images if any
+            const uploadZone = document.getElementById('uploadZone');
+            const files = (uploadZone && uploadZone._getFiles) ? uploadZone._getFiles() : [];
+            for (const file of files) {
+                const imageForm = new FormData();
+                imageForm.append('file', file);
+                await apiFetch(`/api/reviews/${reviewId}/images`, {
+                    method: 'POST',
+                    body: imageForm
+                });
+            }
+
+            window.location.href = '/user/reviews';
+
+        } catch (_) {
+            showAlert(alertBox, 'Network error. Please try again.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    });
+})();
+</script>
+</th:block>
+
+</body>
+</html>

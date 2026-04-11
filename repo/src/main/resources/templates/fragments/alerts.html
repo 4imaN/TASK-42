@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+
+<!--/*
+  Fragment: alerts
+  Usage: th:replace="~{fragments/alerts :: alerts}"
+  Expects model attributes: successMessage, errorMessage, infoMessage, warnMessage
+*/-->
+<div th:fragment="alerts">
+
+    <div class="alert alert-success"
+         th:if="${successMessage}"
+         th:text="${successMessage}"
+         role="alert"
+         aria-live="polite">
+    </div>
+
+    <div class="alert alert-error"
+         th:if="${errorMessage}"
+         th:text="${errorMessage}"
+         role="alert"
+         aria-live="assertive">
+    </div>
+
+    <div class="alert alert-info"
+         th:if="${infoMessage}"
+         th:text="${infoMessage}"
+         role="status"
+         aria-live="polite">
+    </div>
+
+    <div class="alert alert-warn"
+         th:if="${warnMessage}"
+         th:text="${warnMessage}"
+         role="status"
+         aria-live="polite">
+    </div>
+
+</div>
+
+</body>
+</html>

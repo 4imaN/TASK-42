@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Search Analytics</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Admin / Analytics</span>
+            <h1 class="page-title">Search Analytics</h1>
+        </div>
+    </div>
+
+    <!-- Top-level stats -->
+    <div class="stat-cards" style="margin-bottom:2rem;">
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${totalSearches ?: '0'}">0</div>
+            <div class="stat-card-label">Total Searches</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${totalClicks ?: '0'}">0</div>
+            <div class="stat-card-label">Total Clicks</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value"
+                 th:text="${totalSearches != null and totalSearches > 0 ? #numbers.formatDecimal(totalClicks * 100.0 / totalSearches, 1, 1) + '%' : '—'}">—</div>
+            <div class="stat-card-label">Click-Through Rate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${uniqueKeywords ?: '0'}">0</div>
+            <div class="stat-card-label">Unique Keywords</div>
+        </div>
+    </div>
+
+    <div class="analytics-grid">
+
+        <!-- Top search terms -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Top Search Terms</span>
+                <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">Last 30 days</span>
+            </div>
+            <div class="card-body">
+                <div th:if="${topTerms != null and not #lists.isEmpty(topTerms)}">
+                    <div class="analytics-bar-row"
+                         th:each="term, stat : ${topTerms}"
+                         th:with="maxCount=${topTerms[0].searchCount ?: 1}">
+                        <span class="analytics-term" th:text="${term.searchTerm}">keyword</span>
+                        <div style="flex:1; margin:0 .75rem;">
+                            <div class="analytics-bar-track">
+                                <div class="analytics-bar-fill"
+                                     th:style="'width:' + (${term.searchCount * 100 / maxCount}) + '%'"></div>
+                            </div>
+                        </div>
+                        <span class="analytics-count" th:text="${term.searchCount}">0</span>
+                    </div>
+                </div>
+                <p th:if="${topTerms == null or #lists.isEmpty(topTerms)}"
+                   style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">
+                    No search data yet.
+                </p>
+            </div>
+        </div>
+
+        <!-- Top clicked items -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Top Clicked Items</span>
+                <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">Last 30 days</span>
+            </div>
+            <div class="card-body">
+                <div th:if="${topClickedItems != null and not #lists.isEmpty(topClickedItems)}">
+                    <div class="analytics-bar-row"
+                         th:each="item, stat : ${topClickedItems}"
+                         th:with="maxClicks=${topClickedItems[0].clickCount ?: 1}">
+                        <span class="analytics-term" th:text="${item.itemName ?: item.itemId}">item</span>
+                        <div style="flex:1; margin:0 .75rem;">
+                            <div class="analytics-bar-track">
+                                <div class="analytics-bar-fill"
+                                     th:style="'width:' + (${item.clickCount * 100 / maxClicks}) + '%'"></div>
+                            </div>
+                        </div>
+                        <span class="analytics-count" th:text="${item.clickCount}">0</span>
+                    </div>
+                </div>
+                <p th:if="${topClickedItems == null or #lists.isEmpty(topClickedItems)}"
+                   style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">
+                    No click data yet.
+                </p>
+            </div>
+        </div>
+
+        <!-- Search trend over time (data rendered as a simple table) -->
+        <div class="card" th:if="${searchTrend != null and not #lists.isEmpty(searchTrend)}">
+            <div class="card-header">
+                <span class="card-title">Search Trend</span>
+                <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">Daily counts</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-wrap" style="border:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Searches</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="trend : ${searchTrend}">
+                                <td th:text="${trend.date}">—</td>
+                                <td th:text="${trend.count}">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

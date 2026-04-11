@@ -1,0 +1,8 @@
+# Local development profile — safe to use without setting environment variables.
+# Activate with: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# These secrets are for local development only and must never be used in production.
+reclaim:
+  security:
+    jwt-secret: dev-only-jwt-secret-key-that-is-long-enough-for-hmac-sha256-algorithm-at-least-256-bits
+    refresh-secret: dev-only-refresh-secret-key-that-is-long-enough-for-hmac-sha256-algorithm-at-least-256-bits
+    encryption-key: dev-only-encrypt-16c

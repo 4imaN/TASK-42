@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Search</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Catalogue</span>
+            <h1 class="page-title">Search Items</h1>
+        </div>
+    </div>
+
+    <div id="selectionBar" style="margin-bottom:1rem; display:flex; align-items:center; gap:1rem;">
+        <a th:href="@{/user/orders/create}" class="btn btn-primary btn-sm">
+            Create Order (<span id="selectionCount" style="font-weight:bold;">0</span> items)
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="sessionStorage.removeItem('selectedItems'); updateSelectionBadge();">Clear</button>
+    </div>
+
+    <!-- Search form -->
+    <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-body">
+            <form id="searchForm" method="get" th:action="@{/user/search}" novalidate>
+                <div class="form-row" style="grid-template-columns:1fr auto;">
+                    <!-- Keyword with autocomplete -->
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="searchKeyword">Keyword</label>
+                        <div class="input-wrap autocomplete-wrap">
+                            <input type="search" id="searchKeyword" name="keyword"
+                                   th:value="${param.keyword}"
+                                   placeholder="Search items…"
+                                   autocomplete="off"
+                                   aria-autocomplete="list"
+                                   aria-controls="autocompleteList"/>
+                            <div id="autocompleteList" class="autocomplete-list" role="listbox"></div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0; align-self:flex-end;">
+                        <button type="submit" class="btn btn-primary" style="height:42px;">Search</button>
+                    </div>
+                </div>
+
+                <!-- Filters row -->
+                <div class="form-row" style="margin-top:1rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="">All categories</option>
+                            <option th:each="cat : ${categories}"
+                                    th:value="${cat}"
+                                    th:text="${cat}"
+                                    th:selected="${param.category == cat}">Category</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="condition">Condition</label>
+                        <select id="condition" name="condition">
+                            <option value="">Any condition</option>
+                            <option value="NEW"       th:selected="${param.condition == 'NEW'}">New</option>
+                            <option value="LIKE_NEW"  th:selected="${param.condition == 'LIKE_NEW'}">Like New</option>
+                            <option value="GOOD"      th:selected="${param.condition == 'GOOD'}">Good</option>
+                            <option value="FAIR"      th:selected="${param.condition == 'FAIR'}">Fair</option>
+                            <option value="POOR"      th:selected="${param.condition == 'POOR'}">Poor</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Price range -->
+                <div class="form-row" style="margin-top:1rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="minPrice">Min Price</label>
+                        <div class="input-wrap">
+                            <input type="number" id="minPrice" name="minPrice"
+                                   th:value="${param.minPrice}"
+                                   min="0" step="0.01" placeholder="0.00"/>
+                            <span class="input-suffix">$</span>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="maxPrice">Max Price</label>
+                        <div class="input-wrap">
+                            <input type="number" id="maxPrice" name="maxPrice"
+                                   th:value="${param.maxPrice}"
+                                   min="0" step="0.01" placeholder="Any"/>
+                            <span class="input-suffix">$</span>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Main search area + trending sidebar -->
+    <div style="display:grid; grid-template-columns:1fr 220px; gap:1.5rem; align-items:start;">
+
+        <!-- Results -->
+        <div>
+            <div th:if="${results != null}">
+                <p style="font-family:var(--mono); font-size:.7rem; letter-spacing:.08em; color:var(--muted); margin-bottom:1rem;"
+                   th:text="'Found ' + ${#lists.size(results)} + ' results'">Found 0 results</p>
+
+                <div class="results-grid" id="resultsGrid" th:if="${not #lists.isEmpty(results)}"
+                     th:data-search-log-id="${searchLogId}">
+                    <div class="result-card"
+                         th:each="item : ${results}"
+                         th:data-item-id="${item.id}"
+                         role="article"
+                         tabindex="0">
+                        <div class="result-card-img" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="1"
+                                 style="color:var(--border-light);">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                        </div>
+                        <div class="result-card-body">
+                            <div class="result-card-title" th:text="${item.title}">Item Name</div>
+                            <div class="result-card-meta">
+                                <span th:text="${item.category}">Category</span>
+                                <span th:if="${item.itemCondition}">
+                                    &middot; <span th:text="${item.itemCondition}">Condition</span>
+                                </span>
+                            </div>
+                            <div class="result-card-price" th:text="${item.price != null ? '$' + #numbers.formatDecimal(item.price, 1, 2) : '—'}">$0.00</div>
+                            <button class="btn btn-primary btn-sm"
+                                    th:data-item-id="${item.id}"
+                                    th:data-item-title="${item.title}"
+                                    th:data-item-category="${item.category}"
+                                    th:data-item-price="${item.price}"
+                                    onclick="addToOrder(this.dataset)">
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(results)}"
+                     style="padding:3rem; text-align:center; color:var(--muted); font-family:var(--mono); font-size:.75rem; letter-spacing:.1em;">
+                    No items found matching your criteria.
+                </div>
+            </div>
+
+            <!-- Initial state (no search yet) -->
+            <div th:if="${results == null}"
+                 style="padding:4rem 0; text-align:center; color:var(--muted); font-family:var(--mono); font-size:.75rem; letter-spacing:.1em;">
+                Enter a keyword above to search the catalogue.
+            </div>
+        </div>
+
+        <!-- Trending sidebar -->
+        <aside>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="font-size:.8125rem;">Trending</span>
+                </div>
+                <div class="card-body" style="padding:1rem;">
+                    <ul class="trending-list"
+                        th:if="${trendingTerms != null and not #lists.isEmpty(trendingTerms)}">
+                        <li class="trending-item"
+                            th:each="term, stat : ${trendingTerms}">
+                            <span class="trending-rank" th:text="${stat.count}">1</span>
+                            <span class="trending-term"
+                                  th:text="${term.searchTerm}"
+                                  onclick="document.getElementById('searchKeyword').value=this.textContent; document.getElementById('searchForm').submit();">
+                                keyword
+                            </span>
+                        </li>
+                    </ul>
+                    <p th:if="${trendingTerms == null or #lists.isEmpty(trendingTerms)}"
+                       style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">
+                        No trending data yet.
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+// Click tracking is handled globally by app.js initClickTracking() — no duplicate handler here.
+
+// Item selection for order creation
+window.addToOrder = function(dataset) {
+    let selected = JSON.parse(sessionStorage.getItem('selectedItems') || '[]');
+    if (selected.find(i => i.id === dataset.itemId)) return; // already added
+    selected.push({id: dataset.itemId, title: dataset.itemTitle, category: dataset.itemCategory, price: dataset.itemPrice});
+    sessionStorage.setItem('selectedItems', JSON.stringify(selected));
+    updateSelectionBadge();
+};
+
+function updateSelectionBadge() {
+    let selected = JSON.parse(sessionStorage.getItem('selectedItems') || '[]');
+    let badge = document.getElementById('selectionCount');
+    if (badge) {
+        badge.textContent = selected.length;
+        badge.style.display = selected.length > 0 ? 'inline-flex' : 'none';
+    }
+}
+updateSelectionBadge();
+</script>
+</th:block>
+
+</body>
+</html>

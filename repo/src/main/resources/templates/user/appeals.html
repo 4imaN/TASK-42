@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en" layout:decorate="~{layouts/default}">
+<head><title>My Appeals</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Appeals</span>
+            <h1 class="page-title">My Appeals</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/appeals/create}" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                File Appeal
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${appeals != null and not #lists.isEmpty(appeals)}">
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Appeal #</th><th>Order</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+                <tbody>
+                    <tr th:each="appeal : ${appeals}">
+                        <td class="mono" th:text="${appeal.id}">—</td>
+                        <td><a th:href="@{/user/orders/{id}(id=${appeal.orderId})}" th:text="'#' + ${appeal.orderId}" class="mono">—</a></td>
+                        <td><span class="badge" th:classappend="'badge-' + ${appeal.appealStatus.toLowerCase()}" th:text="${appeal.appealStatus}">OPEN</span></td>
+                        <td th:text="${#temporals.format(appeal.createdAt, 'yyyy-MM-dd')}">—</td>
+                        <td><a th:href="@{/user/appeals/{id}(id=${appeal.id})}" class="btn btn-secondary btn-sm">View</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div th:if="${appeals == null or #lists.isEmpty(appeals)}"
+         style="padding:4rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+        <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted);">No appeals filed.</p>
+    </div>
+</div>
+</body>
+</html>

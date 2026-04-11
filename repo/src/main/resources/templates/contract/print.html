@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="'Contract #' + ${contract.id} + ' — ReClaim Portal'">Contract — ReClaim Portal</title>
+    <style>
+        /* ── Base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink:    #111;
+            --rule:   #ccc;
+            --muted:  #666;
+            --amber:  #b45309;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.7;
+            color: var(--ink);
+            background: #fff;
+            padding: 48px;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        /* ── Screen styles ── */
+        .print-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0 24px;
+            border-bottom: 1px solid var(--rule);
+            margin-bottom: 32px;
+        }
+
+        .toolbar-brand {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11pt;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--amber);
+        }
+
+        .btn-print {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 20px;
+            background: var(--amber);
+            color: #fff;
+            border: none;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .btn-print:hover { background: #92400e; }
+
+        /* ── Document ── */
+        .print-doc {}
+
+        .print-header {
+            text-align: center;
+            padding-bottom: 24pt;
+            margin-bottom: 24pt;
+            border-bottom: 2pt solid var(--ink);
+        }
+
+        .print-brand {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 9pt;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8pt;
+        }
+
+        .print-title {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 18pt;
+            font-weight: 700;
+            letter-spacing: -.01em;
+            color: var(--ink);
+            margin-bottom: 6pt;
+        }
+
+        .print-meta {
+            font-size: 9pt;
+            color: var(--muted);
+        }
+
+        .print-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12pt;
+            padding: 16pt 0;
+            border-top: 1pt solid var(--rule);
+            border-bottom: 1pt solid var(--rule);
+            margin-bottom: 24pt;
+        }
+
+        .print-field-label {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 8pt;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 4pt;
+        }
+
+        .print-field-value {
+            font-size: 11pt;
+            color: var(--ink);
+        }
+
+        .print-content {
+            white-space: pre-wrap;
+            font-size: 11pt;
+            line-height: 1.8;
+            color: var(--ink);
+        }
+
+        .print-signature-block {
+            margin-top: 48pt;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48pt;
+        }
+
+        .print-sig-img {
+            max-height: 60pt;
+            max-width: 200pt;
+            display: block;
+            margin-bottom: 4pt;
+            border-bottom: 1pt solid var(--ink);
+            padding-bottom: 4pt;
+        }
+
+        .print-sig-line {
+            border-top: 1pt solid var(--ink);
+            padding-top: 6pt;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 8pt;
+            color: var(--muted);
+        }
+
+        .print-footer {
+            margin-top: 48pt;
+            padding-top: 12pt;
+            border-top: 1pt solid var(--rule);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 8pt;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* ── Print media ── */
+        @media print {
+            .print-toolbar { display: none !important; }
+
+            body {
+                padding: 0;
+                font-size: 11pt;
+            }
+
+            .print-doc { page-break-inside: avoid; }
+
+            a { color: inherit; text-decoration: none; }
+
+            .print-content { white-space: pre-wrap; }
+
+            @page {
+                margin: 2cm 2.5cm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Screen toolbar (hidden when printing) -->
+<div class="print-toolbar" aria-hidden="true">
+    <span class="toolbar-brand">ReClaim Portal</span>
+    <button type="button" class="btn-print" onclick="window.print()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Print
+    </button>
+</div>
+
+<!-- Printable document -->
+<article class="print-doc" role="document">
+
+    <header class="print-header">
+        <div class="print-brand">ReClaim Portal — Official Contract</div>
+        <h1 class="print-title"
+            th:text="${contract.templateVersionId != null ? 'Contract Template v' + contract.templateVersionId : 'Reclaim Contract'}">
+            Reclaim Contract
+        </h1>
+        <div class="print-meta"
+             th:text="'Contract #' + ${contract.id}">Contract #0</div>
+    </header>
+
+    <!-- Metadata grid -->
+    <div class="print-meta-grid">
+        <div>
+            <div class="print-field-label">Contract ID</div>
+            <div class="print-field-value" th:text="${contract.id}">—</div>
+        </div>
+        <div>
+            <div class="print-field-label">Status</div>
+            <div class="print-field-value" th:text="${contract.contractStatus}">—</div>
+        </div>
+        <div>
+            <div class="print-field-label">Related Order</div>
+            <div class="print-field-value"
+                 th:text="${contract.orderId != null ? '#' + contract.orderId : '—'}">—</div>
+        </div>
+        <div>
+            <div class="print-field-label">Initiated</div>
+            <div class="print-field-value"
+                 th:text="${#temporals.format(contract.createdAt, 'yyyy-MM-dd HH:mm')}">—</div>
+        </div>
+        <div>
+            <div class="print-field-label">Template Version</div>
+            <div class="print-field-value"
+                 th:text="${contract.templateVersionId != null ? '#' + contract.templateVersionId : '—'}">—</div>
+        </div>
+        <div>
+            <div class="print-field-label">Signed At</div>
+            <div class="print-field-value"
+                 th:text="${contract.signedAt != null ? #temporals.format(contract.signedAt, 'yyyy-MM-dd HH:mm') : '—'}">—</div>
+        </div>
+    </div>
+
+    <!-- Contract body -->
+    <section>
+        <div class="print-content"
+             th:text="${contract.renderedContent ?: 'No content available.'}">
+            Contract content goes here.
+        </div>
+    </section>
+
+    <!-- Signature block -->
+    <section class="print-signature-block">
+
+        <div>
+            <div class="print-field-label" style="margin-bottom:8pt;">Customer Signature</div>
+            <!-- Render stored signature image when available -->
+            <div th:if="${signature != null and signature.filePath != null}">
+                <img class="print-sig-img"
+                     th:src="@{'/storage/' + ${signature.filePath}}"
+                     alt="Customer signature"/>
+                <div style="font-family:'Helvetica Neue',Arial,sans-serif; font-size:7pt; color:var(--muted); margin-top:2pt;">
+                    Verified: SHA-256 <span th:text="${signature.checksum != null ? signature.checksum.substring(0, T(java.lang.Math).min(16, signature.checksum.length())) + '...' : 'N/A'}">checksum</span>
+                    | Type: <span th:text="${signature.signatureType}">DRAWN</span>
+                </div>
+            </div>
+            <!-- Fallback when signed but no artifact available (should not happen in practice) -->
+            <div th:if="${signature == null and contract.signedAt != null}"
+                 style="height:50pt; border-bottom:1pt solid #111; margin-bottom:4pt; font-style:italic; font-size:9pt;">
+                [Signature artifact unavailable — signed <span th:text="${#temporals.format(contract.signedAt, 'yyyy-MM-dd')}">date</span>]
+            </div>
+            <!-- Not yet signed -->
+            <div th:if="${contract.signedAt == null}"
+                 style="height:50pt; border-bottom:1pt solid #111; margin-bottom:4pt;"></div>
+            <div class="print-sig-line">
+                Signature / Date:
+                <span th:if="${contract.signedAt != null}"
+                      th:text="${#temporals.format(contract.signedAt, 'yyyy-MM-dd')}">—</span>
+            </div>
+        </div>
+
+        <div>
+            <div class="print-field-label" style="margin-bottom:8pt;">Authorized Representative</div>
+            <div style="height:50pt; border-bottom:1pt solid #111; margin-bottom:4pt;"></div>
+            <div class="print-sig-line">Signature / Date:</div>
+        </div>
+
+    </section>
+
+    <footer class="print-footer">
+        <span>ReClaim Portal — Confidential Document</span>
+        <span th:text="'Generated: ' + ${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd HH:mm')}">Generated</span>
+    </footer>
+
+</article>
+
+</body>
+</html>

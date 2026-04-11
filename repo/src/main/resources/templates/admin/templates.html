@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Contract Templates</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Admin / Contracts</span>
+            <h1 class="page-title">Contract Templates</h1>
+        </div>
+    </div>
+
+    <div id="actionAlert"   class="alert alert-error   hidden" role="alert"  aria-live="assertive"></div>
+    <div id="actionSuccess" class="alert alert-success hidden" role="status" aria-live="polite"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 400px; gap:1.5rem; align-items:start;">
+
+        <!-- Templates list -->
+        <div>
+            <div class="table-wrap"
+                 th:if="${templates != null and not #lists.isEmpty(templates)}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="tpl : ${templates}">
+                            <td class="mono" th:text="${tpl.id}">—</td>
+                            <td th:text="${tpl.name}">Template Name</td>
+                            <td th:text="${tpl.description ?: '—'}">—</td>
+                            <td th:text="${#temporals.format(tpl.createdAt, 'yyyy-MM-dd')}">—</td>
+                            <td>
+                                <div style="display:flex; gap:.375rem;">
+                                    <button type="button" class="btn btn-secondary btn-sm"
+                                            data-action="view-template"
+                                            th:data-template-id="${tpl.id}"
+                                            th:data-template-name="${tpl.name}">
+                                        Versions
+                                    </button>
+                                    <button type="button" class="btn btn-ghost btn-sm"
+                                            data-action="add-version"
+                                            th:data-template-id="${tpl.id}"
+                                            th:data-template-name="${tpl.name}">
+                                        + Version
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${templates == null or #lists.isEmpty(templates)}"
+                 style="padding:2rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+                <p style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">
+                    No templates yet.
+                </p>
+            </div>
+
+            <!-- Template versions panel (shown when a template is selected) -->
+            <div id="versionsPanel" class="hidden" style="margin-top:1.5rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title" id="versionsPanelTitle">Versions</span>
+                    </div>
+                    <div class="card-body" id="versionsContent">
+                        <div style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">Loading…</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: create template + add version forms -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+
+            <!-- Create template -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Create Template</span>
+                </div>
+                <div class="card-body">
+                    <form id="createTemplateForm" novalidate>
+
+                        <div class="form-group">
+                            <label class="form-label" for="templateName">Name</label>
+                            <input type="text" id="templateName" name="name"
+                                   placeholder="e.g. Standard Reclaim Agreement" required/>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="templateDesc">Description</label>
+                            <textarea id="templateDesc" name="description"
+                                      rows="2" placeholder="Optional description…"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full" id="createTplBtn">
+                            <span id="createTplLabel">Create Template</span>
+                            <span class="btn-spinner hidden" id="createTplSpinner" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Add version (shown after selecting a template) -->
+            <div class="card" id="addVersionCard" style="display:none;">
+                <div class="card-header">
+                    <span class="card-title">Add Version to: <em id="addVersionTemplateName"></em></span>
+                </div>
+                <div class="card-body">
+                    <form id="addVersionForm" novalidate>
+                        <input type="hidden" id="addVersionTemplateId"/>
+
+                        <div class="form-group">
+                            <label class="form-label" for="changeNotes">Change Notes</label>
+                            <input type="text" id="changeNotes" name="changeNotes"
+                                   placeholder="e.g. Added arbitration clause" required/>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="versionContent">Content</label>
+                            <textarea id="versionContent" name="content"
+                                      rows="8"
+                                      placeholder="Contract template text. Use {{clause_name}} for dynamic clauses."
+                                      required></textarea>
+                            <span class="form-hint">Use &#123;&#123;clause_name&#125;&#125; placeholders for clause fields.</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full" id="addVersionBtn">
+                            <span id="addVersionLabel">Add Version</span>
+                            <span class="btn-spinner hidden" id="addVersionSpinner" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Clause fields (shown after viewing versions) -->
+            <div class="card" id="clauseFieldsCard" style="display:none;">
+                <div class="card-header">
+                    <span class="card-title">Clause Fields: <em id="clauseFieldsVersionLabel"></em></span>
+                </div>
+                <div class="card-body">
+                    <div id="clauseFieldsList" style="margin-bottom:1rem;"></div>
+                    <form id="addClauseFieldForm" novalidate>
+                        <input type="hidden" id="clauseFieldVersionId"/>
+                        <div class="form-group">
+                            <label class="form-label" for="fieldName">Field Name</label>
+                            <input type="text" id="fieldName" placeholder="e.g. partyName" required/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="fieldType">Type</label>
+                            <select id="fieldType">
+                                <option value="TEXT">Text</option>
+                                <option value="DATE">Date</option>
+                                <option value="NUMBER">Number</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="fieldLabel">Label</label>
+                            <input type="text" id="fieldLabel" placeholder="e.g. Party Name"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="fieldDefault">Default Value</label>
+                            <input type="text" id="fieldDefault" placeholder="Optional"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" id="fieldRequired"/> <label for="fieldRequired">Required</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full">Add Field</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+(function () {
+    const alertBox   = document.getElementById('actionAlert');
+    const successBox = document.getElementById('actionSuccess');
+
+    // ── Create template ──────────────────────────────────────
+    document.getElementById('createTemplateForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideAlert(alertBox); hideAlert(successBox);
+
+        const name = document.getElementById('templateName').value.trim();
+        const desc = document.getElementById('templateDesc').value.trim();
+        if (!name) {
+            showAlert(alertBox, 'Template name is required.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('createTplBtn');
+        const lbl = document.getElementById('createTplLabel');
+        const spn = document.getElementById('createTplSpinner');
+        btn.disabled = true; lbl.classList.add('hidden'); spn.classList.remove('hidden');
+
+        try {
+            const res = await apiFetch('/api/contracts/templates', {
+                method: 'POST',
+                body: JSON.stringify({ name, description: desc })
+            });
+            if (res.ok) {
+                showAlert(successBox, 'Template created. Refreshing…', 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                let msg = 'Failed to create template.';
+                try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                showAlert(alertBox, msg, 'error');
+            }
+        } catch (_) {
+            showAlert(alertBox, 'Network error.', 'error');
+        } finally {
+            btn.disabled = false; lbl.classList.remove('hidden'); spn.classList.add('hidden');
+        }
+    });
+
+    // ── Show versions panel ──────────────────────────────────
+    document.querySelectorAll('[data-action="view-template"]').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const tplId   = this.dataset.templateId;
+            const tplName = this.dataset.templateName;
+
+            document.getElementById('versionsPanelTitle').textContent = tplName + ' — Versions';
+            document.getElementById('versionsPanel').classList.remove('hidden');
+            document.getElementById('versionsContent').innerHTML =
+                '<div style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">Loading…</div>';
+
+            try {
+                const res = await apiFetch(`/api/contracts/templates/${tplId}/versions`);
+                if (!res.ok) throw new Error();
+                const versions = await res.json();
+
+                if (!versions.length) {
+                    document.getElementById('versionsContent').innerHTML =
+                        '<p style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">No versions yet.</p>';
+                    return;
+                }
+
+                const rows = versions.map(v => `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:.625rem 0; border-bottom:1px solid var(--border);">
+                        <span class="badge badge-accepted">v${escHtml(String(v.versionNumber))}</span>
+                        <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">
+                            ${escHtml(v.changeNotes || '')}
+                        </span>
+                        <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">
+                            ${escHtml(v.createdAt ? v.createdAt.substring(0,10) : '—')}
+                        </span>
+                        <button class="btn btn-ghost btn-sm" onclick="loadClauseFields(${v.id}, 'v${v.versionNumber}')">Fields</button>
+                    </div>
+                `).join('');
+
+                document.getElementById('versionsContent').innerHTML = rows;
+
+            } catch (_) {
+                document.getElementById('versionsContent').innerHTML =
+                    '<p style="font-family:var(--mono); font-size:.7rem; color:var(--error);">Failed to load versions.</p>';
+            }
+        });
+    });
+
+    // ── Show add version panel ───────────────────────────────
+    document.querySelectorAll('[data-action="add-version"]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const tplId   = this.dataset.templateId;
+            const tplName = this.dataset.templateName;
+            document.getElementById('addVersionTemplateId').value = tplId;
+            document.getElementById('addVersionTemplateName').textContent = tplName;
+            document.getElementById('addVersionCard').style.display = '';
+            document.getElementById('addVersionCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    // ── Add version form ─────────────────────────────────────
+    document.getElementById('addVersionForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideAlert(alertBox); hideAlert(successBox);
+
+        const tplId      = document.getElementById('addVersionTemplateId').value;
+        const changeNotes = document.getElementById('changeNotes').value.trim();
+        const content    = document.getElementById('versionContent').value.trim();
+
+        if (!changeNotes || !content) {
+            showAlert(alertBox, 'Change notes and content are required.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('addVersionBtn');
+        const lbl = document.getElementById('addVersionLabel');
+        const spn = document.getElementById('addVersionSpinner');
+        btn.disabled = true; lbl.classList.add('hidden'); spn.classList.remove('hidden');
+
+        try {
+            const res = await apiFetch(`/api/contracts/templates/${tplId}/versions`, {
+                method: 'POST',
+                body: JSON.stringify({ content, changeNotes })
+            });
+            if (res.ok) {
+                showAlert(successBox, 'Version added. Refreshing…', 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                let msg = 'Failed to add version.';
+                try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                showAlert(alertBox, msg, 'error');
+            }
+        } catch (_) {
+            showAlert(alertBox, 'Network error.', 'error');
+        } finally {
+            btn.disabled = false; lbl.classList.remove('hidden'); spn.classList.add('hidden');
+        }
+    });
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Load clause fields for a version ────────────────────
+    window.loadClauseFields = async function(versionId, label) {
+        document.getElementById('clauseFieldVersionId').value = versionId;
+        document.getElementById('clauseFieldsVersionLabel').textContent = label;
+        document.getElementById('clauseFieldsCard').style.display = '';
+        const listEl = document.getElementById('clauseFieldsList');
+        listEl.innerHTML = '<div style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">Loading\u2026</div>';
+        try {
+            const res = await apiFetch('/api/contracts/templates/versions/' + versionId + '/fields');
+            if (!res.ok) throw new Error();
+            const fields = await res.json();
+            if (!fields.length) {
+                listEl.innerHTML = '<p style="font-family:var(--mono); font-size:.7rem; color:var(--muted);">No fields defined.</p>';
+                return;
+            }
+            listEl.innerHTML = fields.map(f =>
+                '<div style="padding:.375rem 0; border-bottom:1px solid var(--border); font-size:.75rem;">' +
+                '<strong>' + escHtml(f.fieldName) + '</strong> (' + escHtml(f.fieldType) + ')' +
+                (f.required ? ' <em>required</em>' : '') +
+                (f.defaultValue ? ' = ' + escHtml(f.defaultValue) : '') +
+                '</div>'
+            ).join('');
+        } catch (_) {
+            listEl.innerHTML = '<p style="font-family:var(--mono); font-size:.7rem; color:var(--error);">Failed to load.</p>';
+        }
+    };
+
+    // ── Add clause field ─────────────────────────────────────
+    document.getElementById('addClauseFieldForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const versionId = document.getElementById('clauseFieldVersionId').value;
+        const payload = {
+            fieldName: document.getElementById('fieldName').value.trim(),
+            fieldType: document.getElementById('fieldType').value,
+            fieldLabel: document.getElementById('fieldLabel').value.trim(),
+            required: document.getElementById('fieldRequired').checked,
+            defaultValue: document.getElementById('fieldDefault').value.trim(),
+            displayOrder: 0
+        };
+        if (!payload.fieldName) { showAlert(alertBox, 'Field name required.', 'error'); return; }
+        try {
+            const res = await apiFetch('/api/contracts/templates/versions/' + versionId + '/fields', {
+                method: 'POST', body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                loadClauseFields(versionId, document.getElementById('clauseFieldsVersionLabel').textContent);
+                document.getElementById('addClauseFieldForm').reset();
+            } else {
+                showAlert(alertBox, 'Failed to add field.', 'error');
+            }
+        } catch(_) { showAlert(alertBox, 'Network error.', 'error'); }
+    });
+
+})();
+</script>
+</th:block>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Build output
+target/
+*.jar
+*.war
+*.class
+
+# Maven
+apache-maven-*.tar.gz
+
+# Logs
+*.log
+hs_err_pid*
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime / local storage
+storage/
+
+# Claude Code
+.claude/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>My Orders</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Orders</span>
+            <h1 class="page-title">My Orders</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/orders/create}" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                New Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Status filter tabs -->
+    <div style="display:flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+        <a th:href="@{/user/orders}"
+           class="btn btn-sm"
+           th:classappend="${param.status == null} ? 'btn-primary' : 'btn-secondary'">All</a>
+        <a th:each="s : ${ {'PENDING_CONFIRMATION','ACCEPTED','COMPLETED','CANCELED','EXCEPTION'} }"
+           th:href="@{/user/orders(status=${s})}"
+           class="btn btn-sm"
+           th:classappend="${param.status == s} ? 'btn-primary' : 'btn-secondary'"
+           th:text="${s}">STATUS</a>
+    </div>
+
+    <!-- Orders table -->
+    <div class="table-wrap"
+         th:if="${orders != null and not #lists.isEmpty(orders)}">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Created</th>
+                    <th>Appointment ID</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="order : ${orders}">
+                    <td>
+                        <a th:href="@{/user/orders/{id}(id=${order.id})}"
+                           class="text-amber mono"
+                           th:text="'#' + ${order.id}">#1</a>
+                    </td>
+                    <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd')}">&mdash;</td>
+                    <td>
+                        <span th:if="${order.appointmentId != null}"
+                              th:text="${order.appointmentId}" class="mono">&mdash;</span>
+                        <span th:if="${order.appointmentId == null}" class="text-muted">—</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="'badge-' + ${order.orderStatus != null ? order.orderStatus.toLowerCase() : 'unknown'}"
+                              th:text="${order.orderStatus}">PENDING</span>
+                    </td>
+                    <td th:text="${order.totalPrice != null ? '\$' + #numbers.formatDecimal(order.totalPrice, 1, 2) : '—'}">—</td>
+                    <td>
+                        <div style="display:flex; gap:.375rem; flex-wrap:wrap;">
+                            <a th:href="@{/user/orders/{id}(id=${order.id})}"
+                               class="btn btn-secondary btn-sm">View</a>
+                            <button th:if="${order.orderStatus == 'PENDING_CONFIRMATION' or order.orderStatus == 'ACCEPTED'}"
+                                    class="btn btn-danger btn-sm"
+                                    th:data-order-id="${order.id}"
+                                    onclick="var reason = prompt('Reason for cancellation:'); if(reason) apiFetch('/api/orders/' + this.dataset.orderId + '/cancel', {method:'PUT', body:JSON.stringify({reason:reason})}).then(r => {if(r.ok) location.reload(); else r.json().then(e => alert(e.message||'Failed'));});">
+                                Cancel
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${orders == null or #lists.isEmpty(orders)}"
+         style="padding:4rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+        <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted); letter-spacing:.1em;">
+            No orders found.
+        </p>
+        <a th:href="@{/user/search}" class="btn btn-primary" style="margin-top:1.25rem;">
+            Browse Items
+        </a>
+    </div>
+
+
+</div>
+
+</body>
+</html>

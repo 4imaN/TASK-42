@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Sign Contract</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Contracts</span>
+            <h1 class="page-title" th:text="'Sign Contract #' + ${contract.id}">Sign Contract</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/contracts/{id}(id=${contract.id})}" class="btn btn-secondary">&larr; Back</a>
+        </div>
+    </div>
+
+    <div style="max-width:680px;">
+
+        <div id="formAlert" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+
+        <!-- Contract summary -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-body" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+                <div>
+                    <div class="form-label">Contract</div>
+                    <div class="mono" style="font-size:.875rem;"
+                         th:text="'#' + ${contract.id}">—</div>
+                </div>
+                <div>
+                    <div class="form-label">Template</div>
+                    <div class="mono" style="font-size:.875rem;"
+                         th:text="${contract.templateVersionId != null ? 'Version #' + contract.templateVersionId : '—'}">—</div>
+                </div>
+                <div>
+                    <div class="form-label">Status</div>
+                    <span class="badge"
+                          th:classappend="'badge-' + ${(contract.displayStatus ?: contract.contractStatus ?: 'unknown').toLowerCase()}"
+                          th:text="${contract.displayStatus ?: contract.contractStatus}">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signature pad card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Your Signature</span>
+                <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);">
+                    Draw using mouse or touch
+                </span>
+            </div>
+            <div class="card-body">
+
+                <div class="signature-wrap" id="signatureWrap">
+                    <canvas id="signatureCanvas" class="signature-canvas"
+                            aria-label="Signature pad — draw your signature here"
+                            role="img"></canvas>
+                    <div class="signature-placeholder" id="signaturePlaceholder">
+                        Sign here
+                    </div>
+                </div>
+
+                <div class="signature-actions">
+                    <button type="button" class="btn btn-secondary" id="signatureClear">
+                        Clear
+                    </button>
+                </div>
+
+                <div style="margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--border);">
+                    <p style="font-family:var(--mono); font-size:.65rem; color:var(--muted); line-height:1.7; margin-bottom:1.25rem;">
+                        By clicking "Sign Contract" you confirm that you have read and agree to the terms
+                        of this contract. Your electronic signature is legally binding.
+                    </p>
+
+                    <div style="display:flex; gap:.75rem;">
+                        <button type="button" class="btn btn-primary btn-lg" id="signBtn">
+                            <span id="signLabel">Sign Contract</span>
+                            <span class="btn-spinner hidden" id="signSpinner" aria-hidden="true"></span>
+                        </button>
+                        <a th:href="@{/user/contracts/{id}(id=${contract.id})}"
+                           class="btn btn-secondary btn-lg">Cancel</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script th:inline="javascript">
+(function () {
+    // Signature pad is initialised by app.js DOMContentLoaded (window._signaturePad)
+    // We just need to handle the submit
+
+    const contractId = /*[[${contract.id}]]*/ 0;
+    const alertBox   = document.getElementById('formAlert');
+    const signBtn    = document.getElementById('signBtn');
+    const signLabel  = document.getElementById('signLabel');
+    const signSpinner = document.getElementById('signSpinner');
+
+    signBtn.addEventListener('click', async function () {
+        hideAlert(alertBox);
+
+        const pad = window._signaturePad;
+        if (!pad || pad.isEmpty()) {
+            showAlert(alertBox, 'Please draw your signature before submitting.', 'error');
+            return;
+        }
+
+        signBtn.disabled = true;
+        signLabel.classList.add('hidden');
+        signSpinner.classList.remove('hidden');
+
+        try {
+            pad.toBlob(async function (blob) {
+                const formData = new FormData();
+                formData.append('file', blob, 'signature.png');
+                formData.append('signatureType', 'DRAWN');
+
+                try {
+                    const res = await apiFetch(`/api/contracts/${contractId}/sign?signatureType=DRAWN`, {
+                        method: 'PUT',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        window.location.href = `/user/contracts/${contractId}`;
+                        return;
+                    }
+
+                    let msg = 'Failed to submit signature.';
+                    try { const err = await res.json(); msg = err.message || err.error || msg; } catch (_) {}
+                    showAlert(alertBox, msg, 'error');
+
+                } catch (_) {
+                    showAlert(alertBox, 'Network error. Please try again.', 'error');
+                } finally {
+                    signBtn.disabled = false;
+                    signLabel.classList.remove('hidden');
+                    signSpinner.classList.add('hidden');
+                }
+            });
+        } catch (_) {
+            showAlert(alertBox, 'Could not capture signature. Please try again.', 'error');
+            signBtn.disabled = false;
+            signLabel.classList.remove('hidden');
+            signSpinner.classList.add('hidden');
+        }
+    });
+})();
+</script>
+</th:block>
+
+</body>
+</html>

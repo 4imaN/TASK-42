@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+
+<!--/*
+  Fragment: pagination
+  Usage: th:replace="~{fragments/pagination :: pagination(baseUrl='/orders', page=${page})}"
+  Expects:
+    - baseUrl  : String  — the base URL (no query params)
+    - page     : org.springframework.data.domain.Page<?> (currentPage, totalPages, hasPrevious, hasNext)
+*/-->
+<nav th:fragment="pagination(baseUrl, page)"
+     class="pagination"
+     role="navigation"
+     aria-label="Pagination"
+     th:if="${page != null and page.totalPages > 1}">
+
+    <!-- Previous -->
+    <a th:href="${page.hasPrevious() ? baseUrl + '?page=' + (page.number - 1) : '#'}"
+       th:classappend="${!page.hasPrevious()} ? 'disabled'"
+       class="page-link page-link-text"
+       th:attr="aria-disabled=${!page.hasPrevious()}"
+       aria-label="Previous page">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6"/>
+        </svg>
+        Prev
+    </a>
+
+    <!-- Page numbers (show up to 5 around current) -->
+    <th:block th:with="start=${T(java.lang.Math).max(0, page.number - 2)},
+                       end=${T(java.lang.Math).min(page.totalPages - 1, page.number + 2)}">
+        <th:block th:each="i : ${#numbers.sequence(start, end)}">
+            <a th:href="${baseUrl + '?page=' + i}"
+               class="page-link"
+               th:classappend="${i == page.number} ? 'active'"
+               th:text="${i + 1}"
+               th:attr="aria-current=${i == page.number ? 'page' : null}">1</a>
+        </th:block>
+    </th:block>
+
+    <!-- Next -->
+    <a th:href="${page.hasNext() ? baseUrl + '?page=' + (page.number + 1) : '#'}"
+       th:classappend="${!page.hasNext()} ? 'disabled'"
+       class="page-link page-link-text"
+       th:attr="aria-disabled=${!page.hasNext()}"
+       aria-label="Next page">
+        Next
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 18l6-6-6-6"/>
+        </svg>
+    </a>
+
+</nav>
+
+</body>
+</html>

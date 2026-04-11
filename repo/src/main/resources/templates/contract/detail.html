@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Contract Detail</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Contracts</span>
+            <h1 class="page-title" th:text="'Contract #' + ${contract.id}">Contract</h1>
+        </div>
+        <div class="page-header-actions">
+            <a th:href="@{/user/contracts}" class="btn btn-secondary">&larr; All Contracts</a>
+            <a th:href="@{/user/contracts/{id}/print(id=${contract.id})}"
+               class="btn btn-ghost btn-sm" target="_blank">
+                Print / Export
+            </a>
+        </div>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="step-indicator" role="list" aria-label="Contract progress">
+
+        <div class="step"
+             th:classappend="${contract.contractStatus == 'INITIATED' or contract.contractStatus == 'CONFIRMED' or contract.contractStatus == 'SIGNED' or contract.contractStatus == 'ARCHIVED'} ? 'completed'"
+             role="listitem">
+            <div class="step-dot">1</div>
+            <div class="step-label">Initiate</div>
+        </div>
+
+        <div class="step"
+             th:classappend="${contract.contractStatus == 'CONFIRMED' or contract.contractStatus == 'SIGNED' or contract.contractStatus == 'ARCHIVED'} ? 'completed' : (${contract.contractStatus == 'INITIATED'} ? 'active' : '')"
+             role="listitem">
+            <div class="step-dot">2</div>
+            <div class="step-label">Confirm</div>
+        </div>
+
+        <div class="step"
+             th:classappend="${contract.contractStatus == 'SIGNED' or contract.contractStatus == 'ARCHIVED'} ? 'completed' : (${contract.contractStatus == 'CONFIRMED'} ? 'active' : '')"
+             role="listitem">
+            <div class="step-dot">3</div>
+            <div class="step-label">Sign</div>
+        </div>
+
+        <div class="step"
+             th:classappend="${contract.contractStatus == 'ARCHIVED'} ? 'completed' : (${contract.contractStatus == 'SIGNED'} ? 'active' : '')"
+             role="listitem">
+            <div class="step-dot">4</div>
+            <div class="step-label">Archive</div>
+        </div>
+
+    </div>
+
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; align-items:start;">
+
+        <!-- Left: contract content -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <!-- Info card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Details</span>
+                    <span class="badge"
+                          th:classappend="'badge-' + ${(contract.displayStatus ?: contract.contractStatus ?: 'unknown').toLowerCase()}"
+                          th:text="${contract.displayStatus ?: contract.contractStatus}">STATUS</span>
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                        <div>
+                            <div class="form-label">Template</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${contract.templateVersionId != null ? 'Version #' + contract.templateVersionId : '—'}">—</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Version</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${contract.templateVersionId != null ? '#' + contract.templateVersionId : '—'}">—</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Related Order</div>
+                            <div>
+                                <a th:if="${contract.orderId != null}"
+                                   th:href="@{/user/orders/{id}(id=${contract.orderId})}"
+                                   th:text="'#' + ${contract.orderId}"
+                                   class="mono text-amber">—</a>
+                                <span th:if="${contract.orderId == null}" class="text-muted mono">—</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-label">Initiated</div>
+                            <div class="mono" style="font-size:.8125rem;"
+                                 th:text="${#temporals.format(contract.createdAt, 'yyyy-MM-dd HH:mm')}">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rendered contract content -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Contract Content</span>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <div class="contract-content"
+                         style="white-space:pre-wrap;"
+                         th:text="${contract.renderedContent ?: 'No content available.'}">
+                        Contract text will appear here.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Signature block (if signed) -->
+            <div class="card" th:if="${contract.signedAt != null}">
+                <div class="card-header">
+                    <span class="card-title">Signature</span>
+                    <span style="font-family:var(--mono); font-size:.65rem; color:var(--muted);"
+                          th:text="${#temporals.format(contract.signedAt, 'yyyy-MM-dd HH:mm')}">—</span>
+                </div>
+                <div class="card-body">
+                    <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted);">
+                        Signed on <span th:text="${#temporals.format(contract.signedAt, 'yyyy-MM-dd')}">—</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Evidence files -->
+            <div class="card" th:if="${evidenceFiles != null and not #lists.isEmpty(evidenceFiles)}"
+                 style="margin-top:1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Evidence Attachments</span>
+                </div>
+                <div class="card-body">
+                    <ul style="list-style:none; padding:0; margin:0;">
+                        <li th:each="file : ${evidenceFiles}"
+                            style="display:flex; align-items:center; gap:.75rem; padding:.5rem 0; border-bottom:1px solid var(--border);">
+                            <span th:text="${file.fileName}" style="font-size:.8rem;">file.png</span>
+                            <span style="font-size:.7rem; color:var(--muted);"
+                                  th:text="${file.contentType}">image/png</span>
+                            <a th:href="@{'/storage/' + ${file.filePath}}"
+                               class="btn btn-secondary btn-sm" target="_blank">View</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Upload evidence -->
+            <div class="card" style="margin-top:1rem;">
+                <div class="card-header">
+                    <span class="card-title">Upload Evidence</span>
+                </div>
+                <div class="card-body">
+                    <input type="file" id="evidenceFileInput" accept="image/jpeg,image/png"/>
+                    <button type="button" class="btn btn-primary btn-sm" style="margin-top:.5rem;"
+                            th:data-contract-id="${contract.id}"
+                            onclick="uploadEvidence(this.dataset.contractId)">Upload</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: actions -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Actions</span>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:.75rem;">
+
+                <!-- Confirm: INITIATED status only -->
+                <button th:if="${contract.contractStatus == 'INITIATED'}"
+                        class="btn btn-primary w-full"
+                        th:data-contract-id="${contract.id}"
+                        onclick="apiFetch('/api/contracts/' + this.dataset.contractId + '/confirm', {method:'PUT'}).then(r => {if(r.ok) location.reload(); else r.json().then(e => alert(e.message || 'Failed'));});">
+                    Confirm Contract
+                </button>
+
+                <!-- Sign: CONFIRMED status only -->
+                <a th:if="${contract.contractStatus == 'CONFIRMED'}"
+                   th:href="@{/user/contracts/{id}/sign(id=${contract.id})}"
+                   class="btn btn-primary w-full">
+                    Sign Contract
+                </a>
+
+                <!-- Archive: SIGNED status only, admin only -->
+                <button th:if="${contract.contractStatus == 'SIGNED'}"
+                        sec:authorize="hasRole('ADMIN')"
+                        class="btn btn-secondary w-full"
+                        th:data-contract-id="${contract.id}"
+                        onclick="if(confirm('Archive this contract?')) apiFetch('/api/contracts/' + this.dataset.contractId + '/archive', {method:'PUT'}).then(r => {if(r.ok) location.reload(); else r.json().then(e => alert(e.message || 'Failed'));});">
+                    Archive Contract
+                </button>
+
+                <!-- Print -->
+                <a th:href="@{/user/contracts/{id}/print(id=${contract.id})}"
+                   class="btn btn-secondary w-full" target="_blank">
+                    Print / Download
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+window.uploadEvidence = async function(contractId) {
+    const input = document.getElementById('evidenceFileInput');
+    if (!input.files.length) { alert('Select a file first.'); return; }
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    const res = await apiFetch('/api/contracts/' + contractId + '/evidence', {method:'POST', body: fd});
+    if (res.ok) location.reload();
+    else alert('Upload failed.');
+};
+</script>
+</th:block>
+
+</body>
+</html>

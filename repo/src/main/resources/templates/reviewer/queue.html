@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Order Queue</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Reviewer</span>
+            <h1 class="page-title">Order Queue</h1>
+        </div>
+    </div>
+
+    <div class="table-wrap"
+         th:if="${queue != null and not #lists.isEmpty(queue)}">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Submitted</th>
+                    <th>Appointment</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="order : ${queue}">
+                    <td>
+                        <a th:href="@{/reviewer/orders/{id}(id=${order.id})}"
+                           class="text-amber mono"
+                           th:text="'#' + ${order.id}">#1</a>
+                    </td>
+                    <td th:text="${order.userId ?: '—'}">—</td>
+                    <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd')}">&mdash;</td>
+                    <td>
+                        <span th:if="${order.appointmentId != null}"
+                              th:text="${order.appointmentId}">&mdash;</span>
+                        <span th:if="${order.appointmentId == null}" class="text-muted">—</span>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:.375rem;">
+                            <button class="btn btn-primary btn-sm"
+                                    th:data-order-id="${order.id}"
+                                    onclick="apiFetch('/api/reviewer/orders/' + this.dataset.orderId + '/accept', {method:'PUT'}).then(r => {if(r.ok) location.reload();});">
+                                Accept
+                            </button>
+                            <a th:href="@{/reviewer/orders/{id}(id=${order.id})}"
+                               class="btn btn-secondary btn-sm">View</a>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:if="${queue == null or #lists.isEmpty(queue)}"
+         style="padding:4rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+        <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted); letter-spacing:.1em;">
+            The queue is empty. Check back later.
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>

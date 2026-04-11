@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="robots" content="noindex, nofollow"/>
+    <title layout:title-pattern="$CONTENT_TITLE — ReClaim Portal">ReClaim Portal</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}"/>
+    <th:block layout:fragment="head-extra"></th:block>
+</head>
+<body>
+<div class="app-shell">
+
+    <!-- ── Top navigation bar ────────────────────────────────── -->
+    <nav class="nav-bar" role="navigation" aria-label="Main navigation">
+
+        <a class="nav-brand" th:href="@{/user/dashboard}" aria-label="ReClaim Portal home">
+            <div class="nav-brand-icon" aria-hidden="true">
+                <div class="nav-brand-icon-inner"></div>
+            </div>
+            <span class="nav-brand-name">ReClaim</span>
+        </a>
+
+        <ul class="nav-links" role="list">
+
+            <!-- User links (shown to all authenticated users) -->
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/dashboard}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/dashboard')} ? 'active'">
+                    Dashboard
+                </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/search}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/search')} ? 'active'">
+                    Search
+                </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/orders}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/orders')} ? 'active'">
+                    Orders
+                </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/contracts}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/contracts')} ? 'active'">
+                    Contracts
+                </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/reviews}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/reviews')} ? 'active'">
+                    Reviews
+                </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/user/appeals}"
+                   th:classappend="${#strings.startsWith(currentURI, '/user/appeals')} ? 'active'">
+                    Appeals
+                </a>
+            </li>
+
+            <!-- Reviewer links -->
+            <li sec:authorize="hasRole('REVIEWER')">
+                <a th:href="@{/reviewer/dashboard}"
+                   th:classappend="${#strings.startsWith(currentURI, '/reviewer')} ? 'active'">
+                    Reviewer
+                </a>
+            </li>
+
+            <!-- Admin links -->
+            <li sec:authorize="hasRole('ADMIN')">
+                <a th:href="@{/admin/dashboard}"
+                   th:classappend="${#strings.startsWith(currentURI, '/admin')} ? 'active'">
+                    Admin
+                </a>
+            </li>
+
+        </ul>
+
+        <div class="nav-spacer"></div>
+
+        <!-- Authenticated user controls -->
+        <div class="nav-actions" sec:authorize="isAuthenticated()">
+            <div class="nav-user">
+                <div class="nav-user-avatar" aria-hidden="true"
+                     th:text="${#strings.substring(#authentication.name, 0, 2).toUpperCase()}">US</div>
+                <span class="nav-user-name" th:text="${#authentication.name}">username</span>
+            </div>
+            <a href="#" class="btn btn-secondary btn-sm" data-action="logout" aria-label="Sign out">
+                Sign out
+            </a>
+        </div>
+
+    </nav>
+    <!-- ── end nav ──────────────────────────────────────────── -->
+
+    <div class="app-content">
+        <main class="main-area" id="main-content" role="main">
+
+            <!-- Flash message fragments -->
+            <th:block th:replace="~{fragments/alerts :: alerts}"></th:block>
+
+            <!-- Page content injected here -->
+            <div layout:fragment="content">
+                <!-- Content goes here -->
+            </div>
+
+        </main>
+    </div>
+
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+<th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

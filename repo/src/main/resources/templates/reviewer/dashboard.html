@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Reviewer Dashboard</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Reviewer</span>
+            <h1 class="page-title"
+                th:text="'Welcome, ' + ${#authentication.name}">Welcome, Reviewer</h1>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${queueCount ?: '0'}">0</div>
+            <div class="stat-card-label">In Queue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${acceptedCount ?: '0'}">0</div>
+            <div class="stat-card-label">Accepted</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${completedCount ?: '0'}">0</div>
+            <div class="stat-card-label">Completed</div>
+        </div>
+    </div>
+
+    <h3 style="margin-bottom:1rem; font-size:.875rem; color:var(--muted); font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase;">
+        Quick Access
+    </h3>
+
+    <div class="quick-cards">
+
+        <a th:href="@{/reviewer/queue}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Order Queue</div>
+            <div class="quick-card-desc">
+                View and accept pending orders awaiting review.
+                <span th:if="${queueCount != null and queueCount > 0}"
+                      class="badge badge-pending"
+                      style="margin-top:.5rem; display:inline-flex;"
+                      th:text="${queueCount} + ' waiting'">0 waiting</span>
+            </div>
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>

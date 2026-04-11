@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Administration</span>
+            <h1 class="page-title">Admin Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- System stats -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${totalUsers ?: '0'}">0</div>
+            <div class="stat-card-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${totalOrders ?: '0'}">0</div>
+            <div class="stat-card-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${totalSearches ?: '0'}">0</div>
+            <div class="stat-card-label">Total Searches</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-value" th:text="${activeTemplates ?: '0'}">0</div>
+            <div class="stat-card-label">Active Templates</div>
+        </div>
+    </div>
+
+    <h3 style="margin-bottom:1rem; font-size:.875rem; color:var(--muted); font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase;">
+        Management
+    </h3>
+
+    <div class="quick-cards">
+
+        <a th:href="@{/admin/strategies}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Ranking Strategies</div>
+            <div class="quick-card-desc">Manage and activate search ranking strategies.</div>
+        </a>
+
+        <a th:href="@{/admin/analytics}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Analytics</div>
+            <div class="quick-card-desc">View search analytics, top terms, and click data.</div>
+        </a>
+
+        <a th:href="@{/admin/templates}" class="quick-card">
+            <div class="quick-card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            </div>
+            <div class="quick-card-title">Contract Templates</div>
+            <div class="quick-card-desc">Manage contract templates and their versions.</div>
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>

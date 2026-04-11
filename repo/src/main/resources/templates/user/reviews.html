@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>My Reviews</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <div class="page-header">
+        <div class="page-header-info">
+            <span class="page-eyebrow">Reviews</span>
+            <h1 class="page-title">My Reviews</h1>
+        </div>
+    </div>
+
+    <!-- Reviews list -->
+    <div th:if="${reviews != null and not #lists.isEmpty(reviews)}">
+
+        <div th:each="review : ${reviews}" class="review-card">
+            <div class="review-card-header">
+                <div>
+                    <!-- Star display -->
+                    <div class="stars-display" aria-label="${review.rating + ' out of 5 stars'}">
+                        <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                            <span th:classappend="${i <= review.rating} ? 'star-on' : 'star-off'">&#9733;</span>
+                        </th:block>
+                    </div>
+                    <div class="review-card-meta">
+                        <span th:text="${#temporals.format(review.createdAt, 'yyyy-MM-dd')}">Date</span>
+                        <span th:if="${review.orderId != null}">
+                            &middot; Order
+                            <a th:href="@{/user/orders/{id}(id=${review.orderId})}"
+                               th:text="'#' + ${review.orderId}">—</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="review-card-body" th:text="${review.reviewText}">Review content</div>
+
+        </div>
+
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${reviews == null or #lists.isEmpty(reviews)}"
+         style="padding:4rem; text-align:center; border:1px solid var(--border); background:var(--surface);">
+        <p style="font-family:var(--mono); font-size:.75rem; color:var(--muted); letter-spacing:.1em;">
+            You haven't left any reviews yet.
+        </p>
+        <a th:href="@{/user/orders}" class="btn btn-primary" style="margin-top:1.25rem;">
+            View Orders
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>
