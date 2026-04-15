@@ -215,10 +215,22 @@ class ReviewerPageControllerTest {
         assertThat(options).as("templateVersionOptions must be a list").isNotNull();
         assertThat(options).as("templateVersionOptions must be non-empty (template seeded in @BeforeEach)").isNotEmpty();
 
-        // The first option's label must contain the template name
-        Map<String, Object> firstOption = options.get(0);
-        String label = (String) firstOption.get("label");
+        // Locate the option for *this test's* template by name — prior HTTP-level tests
+        // in the same JVM run commit additional active templates with lower IDs that
+        // appear earlier in the controller's list.
+        Map<String, Object> ourOption = options.stream()
+                .filter(o -> {
+                    Object lbl = o.get("label");
+                    return lbl instanceof String && ((String) lbl).contains(template.getName());
+                })
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "No templateVersionOption found with label containing '" + template.getName() + "'"));
+
+        String label = (String) ourOption.get("label");
         assertThat(label).as("label must contain template name").contains(template.getName());
+        // Controller returns the latest (highest version number) — we seeded v1 and v2 above.
+        assertThat(label).as("label must reflect the latest seeded version").contains("v2");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

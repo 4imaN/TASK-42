@@ -204,8 +204,14 @@ class BootstrapServiceIntegrationTest {
 
     @Test
     void shouldSkipWhenRoleNotFound() throws Exception {
-        // Delete ROLE_ADMIN if it exists so there is no role to assign
-        roleRepository.findByName("ROLE_ADMIN").ifPresent(roleRepository::delete);
+        // Rename ROLE_ADMIN (rather than delete) so findByName("ROLE_ADMIN") returns empty
+        // without violating the user_roles FK — prior tests in the same JVM run may have
+        // committed users referencing ROLE_ADMIN via the user_roles join table. The
+        // @Transactional class rule rolls back the rename at end of test.
+        roleRepository.findByName("ROLE_ADMIN").ifPresent(role -> {
+            role.setName("ROLE_ADMIN_TEMP_MISSING_" + System.nanoTime());
+            roleRepository.save(role);
+        });
         userRepository.findByUsername("admin").ifPresent(userRepository::delete);
 
         Path pwdFile = tempDir.resolve("norole-passwords.properties");
