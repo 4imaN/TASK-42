@@ -49,15 +49,17 @@ if [ ! -f "$SECRETS_DIR/field-encryption-key.enc" ]; then
 fi
 
 if [ ! -f "$SECRETS_DIR/bootstrap-passwords.enc" ]; then
-    echo "Generating bootstrap passwords..."
-    ADMIN_PASS=$(openssl rand -base64 18)
-    REVIEWER_PASS=$(openssl rand -base64 18)
-    USER_PASS=$(openssl rand -base64 18)
+    # Deterministic demo credentials documented in README.md for evaluation.
+    # Override by setting RECLAIM_ADMIN_PASS / RECLAIM_REVIEWER_PASS / RECLAIM_USER_PASS
+    # in the environment before first boot. Not for production — rotate on deployment.
+    ADMIN_PASS="${RECLAIM_ADMIN_PASS:-AdminDemo1!pass}"
+    REVIEWER_PASS="${RECLAIM_REVIEWER_PASS:-ReviewerDemo1!pass}"
+    USER_PASS="${RECLAIM_USER_PASS:-UserDemo1!pass}"
     write_encrypted_secret "$SECRETS_DIR/bootstrap-passwords.enc" "admin_password=$ADMIN_PASS
 reviewer_password=$REVIEWER_PASS
 user_password=$USER_PASS"
     echo "========================================="
-    echo "BOOTSTRAP CREDENTIALS (first boot only):"
+    echo "BOOTSTRAP CREDENTIALS (first boot):"
     echo "  admin    / $ADMIN_PASS"
     echo "  reviewer / $REVIEWER_PASS"
     echo "  user     / $USER_PASS"

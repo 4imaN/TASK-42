@@ -19,7 +19,10 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -71,8 +74,13 @@ class AuthenticationTest {
     @Test
     void shouldReturn401WhenNoToken() throws Exception {
         // Custom AuthenticationEntryPoint returns 401 for unauthenticated requests
+        // and writes a JSON body with status/error/message fields.
         mockMvc.perform(get("/api/orders/my"))
-               .andExpect(status().isUnauthorized());
+               .andExpect(status().isUnauthorized())
+               .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_JSON))
+               .andExpect(jsonPath("$.status").exists())
+               .andExpect(jsonPath("$.error").exists())
+               .andExpect(content().string(containsString("Unauthorized")));
     }
 
     @Test

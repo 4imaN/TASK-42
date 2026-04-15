@@ -1,77 +1,61 @@
 # ReClaim Lease & Recycling Operations Portal
 
-Offline, end-to-end recycling transaction and lease contract management system built with Spring Boot and Thymeleaf.
+**Project type: fullstack** — Spring Boot REST API + Thymeleaf server-rendered UI.
 
-## Quick Start
-
-### Docker (recommended)
+## Start
 
 ```bash
-docker compose up --build
+docker-compose up
 ```
 
-This brings up the full stack (Spring Boot app + MySQL 8). Runtime secrets (JWT, refresh token, encryption key) are generated automatically on first boot by `infra/app/bootstrap-secrets.sh` and persisted in a Docker volume.
+(Also works with the newer `docker compose up` syntax.)
 
-### Local Development
+## Access
 
-Requires MySQL 8 running on `localhost:3306` with database `reclaim_portal`.
+Open **http://localhost:8080** — the login page is served at `/login`.
 
-**Option A: Use the `dev` profile** (recommended for local development — no env vars needed):
+## Demo credentials
+
+Deterministic credentials are provisioned on first Docker boot (encrypted at rest, decrypted by the entrypoint):
+
+| Role     | Username   | Password              |
+|----------|------------|-----------------------|
+| Admin    | `admin`    | `AdminDemo1!pass`     |
+| Reviewer | `reviewer` | `ReviewerDemo1!pass`  |
+| User     | `user`     | `UserDemo1!pass`      |
+
+All three accounts force a password reset on first login. Override the defaults by setting `RECLAIM_ADMIN_PASS`, `RECLAIM_REVIEWER_PASS`, `RECLAIM_USER_PASS` in the environment before the first `docker-compose up`.
+
+## Verification
+
+1. Run `docker-compose up` and wait until the logs print `Started ReclaimPortalApplication`.
+2. Open **http://localhost:8080** — you should be redirected to `/login`.
+3. Log in as `user` / `UserDemo1!pass` → change the password when prompted → you land on `/user/dashboard` showing your order counts.
+4. Navigate to **Search**, enter a keyword, verify the catalog renders; click **+ Add** on an item → the selection count badge increments.
+5. Go to **Orders → New Order**, pick a date, select a 30-minute slot, submit → you land on the order detail page with status **PENDING_CONFIRMATION**.
+6. Log out, log in as `reviewer` / `ReviewerDemo1!pass`, change the password → open **Reviewer → Queue**, click the user's order → **Accept Order** → status flips to **ACCEPTED**.
+7. Log in as `admin` / `AdminDemo1!pass` → **Admin → Strategies** shows the current ranking strategy; **Admin → Analytics** shows the search analytics populated from step 4.
+
+Each step above is covered by automated tests (`UserJourneyE2ETest`, `BrowserLoginJourneyTest`, `BrowserMultiPageNavigationTest`), so a green test run is a strong proxy for successful manual verification.
+
+## Stopping
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+docker-compose down
 ```
 
-The `dev` profile (`application-dev.yml`) provides pre-configured development-only secrets that are safe for local use.
+Add `-v` to also drop the persisted MySQL + secrets volumes (forces fresh secret generation on next start).
 
-**Option B: Set environment variables explicitly:**
-
-```bash
-export RECLAIM_JWT_SECRET="your-256-bit-jwt-secret"
-export RECLAIM_REFRESH_SECRET="your-256-bit-refresh-secret"
-export RECLAIM_ENCRYPTION_KEY="your-encryption-key"
-./mvnw spring-boot:run
-```
-
-The application will **fail fast on startup** if required security secrets are missing outside `test` and `dev` profiles. This prevents accidentally running with empty/insecure secrets.
-
-### Default Access
-
-**Docker:** On first Docker boot, bootstrap credentials are generated and printed to the console:
-
-```
-BOOTSTRAP CREDENTIALS (first boot only):
-  admin    / <generated>
-  reviewer / <generated>
-  user     / <generated>
-```
-
-**Local dev (`dev` profile):** When no passwords file is configured, the `dev` profile automatically creates bootstrap users with deterministic credentials:
-
-| Username   | Password            | Role          |
-|------------|---------------------|---------------|
-| `admin`    | `DevAdmin1!pass`    | ROLE_ADMIN    |
-| `reviewer` | `DevReviewer1!pass` | ROLE_REVIEWER |
-| `user`     | `DevUser1!pass`     | ROLE_USER     |
-
-All bootstrap accounts require password reset on first login. These dev credentials are only created when running with the `dev` profile and should never be used in production.
-
-## Running Tests
+## Running Tests (Docker)
 
 ```bash
 ./run_tests.sh
 ```
 
-Or directly:
+The script builds a test image (`Dockerfile.test`) and runs the full suite inside a container — no local JDK or Maven needed. Tests use H2 in MySQL compatibility mode.
 
-```bash
-./mvnw clean verify
-```
-
-Tests use H2 in MySQL compatibility mode. No external database required.
-
-- **320 tests** across unit, service, security, authorization, API, and web layers
-- **JaCoCo coverage gates**: 70% line / 45% branch (thresholds reflect JaCoCo 0.8.12 under-reporting on JDK 25 bytecode; actual test coverage of services is higher than reported)
+- **576 tests** across unit, service, security, authorization, API, web, browser (HtmlUnit), and real-HTTP layers
+- **JaCoCo coverage gates**: 70% line / 45% branch (thresholds reflect JaCoCo 0.8.12 under-reporting on JDK 25 bytecode; actual runtime coverage is higher)
 
 ## Configuration
 
@@ -147,9 +131,33 @@ Auth API endpoints (JSON, no view):
 | `/api/auth/logout` | POST | Clears refresh cookie; Origin-validated |
 | `/api/auth/change-password` | POST | Requires authenticated Bearer token |
 
+## Test Coverage Overview
+
+| Layer | Test pattern | Count |
+|-------|--------------|-------|
+| Unit (pure logic) | `src/test/java/**/unit/*Test.java` | ~50 |
+| Service integration (Spring + H2) | `src/test/java/**/service/*IntegrationTest.java` | ~130 |
+| API contract (MockMvc + real JWT) | `src/test/java/**/api/*Test.java` | ~100 |
+| Security / authorization | `src/test/java/**/security/*Test.java` | ~30 |
+| Web / page controller | `src/test/java/**/web/*Test.java` | ~30 |
+| End-to-end MockMvc journeys | `src/test/java/**/e2e/UserJourneyE2ETest.java` | 2 multi-step flows |
+| Browser (HtmlUnit, real HTTP) | `src/test/java/**/e2e/BrowserLoginFlowTest.java`, `BrowserLoginJourneyTest.java`, `BrowserMultiPageNavigationTest.java` | 14 tests — static assets, programmatic login, multi-page nav |
+| MySQL native full-text (Testcontainers) | `src/test/java/**/catalog/MySqlFullTextSearchIT.java` | 4 tests, gated on `RUN_MYSQL_IT=true` |
+
+### Running the MySQL integration tests
+
+The MySQL `MATCH/AGAINST` path is exercised by `MySqlFullTextSearchIT` via Testcontainers. It is disabled by default and runs only when `RUN_MYSQL_IT=true` is set:
+
+```bash
+# Runs inside the Docker-built test image with Testcontainers-in-Docker enabled.
+docker build -f Dockerfile.test -t reclaim-tests . && \
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+    -e RUN_MYSQL_IT=true reclaim-tests
+```
+
 ## Manual Verification Boundaries
 
-- **MySQL full-text search**: The actual `FULLTEXT INDEX` DDL lives in `db/migration-mysql/V7__create_fulltext_index.sql`, which is included in Flyway's locations only for the MySQL profile (`application.yml`). The H2 test profile (`application-test.yml`) only loads `db/migration`, so H2 never sees V7. `FullTextIndexInitializer` also creates the index at startup on MySQL as a safety net (idempotent). On H2 (tests), the LIKE-based fallback in `RecyclingItemRepository.searchItems()` is used.
+- **MySQL full-text search**: `FullTextSearchFallbackTest` validates the H2 fallback path; `MySqlFullTextSearchIT` exercises the real `MATCH/AGAINST` query against a Testcontainers MySQL 8 instance (gated on `RUN_MYSQL_IT=true`). No remaining automated gap — production behavior is covered when Docker is available.
 - **Secrets at rest**: JWT, refresh, and encryption secrets are generated by `bootstrap-secrets.sh` and encrypted with AES-256-CBC using a volume-local wrapping key (`.wrap`). The entrypoint decrypts them into env vars at runtime — raw signing material is never stored as plaintext on disk. The wrapping key itself is stored in the Docker volume with `chmod 600`. This is not equivalent to HSM or Vault but prevents naive disk reads.
 - **Docker bootstrap**: Credential generation and password-file reading are tested in integration tests; the Docker entrypoint script (`infra/app/entrypoint.sh`) should be verified manually on first deployment.
 - **Canvas signature**: Browser-based canvas capture is not tested server-side; the API contract (PUT with multipart `file` + `signatureType` param) is tested.

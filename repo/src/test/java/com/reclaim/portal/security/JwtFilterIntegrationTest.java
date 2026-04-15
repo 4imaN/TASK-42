@@ -22,6 +22,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -85,9 +87,13 @@ class JwtFilterIntegrationTest {
     @Test
     void shouldRejectInvalidToken() throws Exception {
         // Invalid JWT — filter rejects and request becomes anonymous → 401
+        // The custom AuthenticationEntryPoint returns a JSON body.
         mockMvc.perform(get("/api/orders/my")
                 .header("Authorization", "Bearer invalid.jwt.token"))
-               .andExpect(status().isUnauthorized());
+               .andExpect(status().isUnauthorized())
+               .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_JSON))
+               .andExpect(jsonPath("$.status").exists())
+               .andExpect(jsonPath("$.error").exists());
     }
 
     @Test
@@ -103,8 +109,12 @@ class JwtFilterIntegrationTest {
     @Test
     void shouldRejectRequestWithNoToken() throws Exception {
         // No token → anonymous request to protected endpoint → 401
+        // The custom AuthenticationEntryPoint returns a JSON body.
         mockMvc.perform(get("/api/orders/my"))
-               .andExpect(status().isUnauthorized());
+               .andExpect(status().isUnauthorized())
+               .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_JSON))
+               .andExpect(jsonPath("$.status").exists())
+               .andExpect(jsonPath("$.error").exists());
     }
 
     @Test

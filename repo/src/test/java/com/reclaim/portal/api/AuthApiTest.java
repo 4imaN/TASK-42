@@ -80,6 +80,23 @@ class AuthApiTest {
     }
 
     @Test
+    void shouldLoginAndReceiveToken() throws Exception {
+        Map<String, String> loginRequest = Map.of(
+            "username", testUser.getUsername(),
+            "password", "TestPassword1!"
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.accessToken").exists())
+               .andExpect(jsonPath("$.forcePasswordReset").value(false))
+               .andExpect(cookie().exists("refreshToken"))
+               .andExpect(cookie().httpOnly("refreshToken", true));
+    }
+
+    @Test
     void shouldLogin() throws Exception {
         Map<String, String> loginRequest = Map.of(
             "username", testUser.getUsername(),
@@ -92,6 +109,41 @@ class AuthApiTest {
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.accessToken").isNotEmpty())
                .andExpect(cookie().exists("refreshToken"));
+    }
+
+    @Test
+    void shouldRefreshToken() throws Exception {
+        // First login to get refresh token cookie and initial access token
+        Map<String, String> loginRequest = Map.of(
+            "username", testUser.getUsername(),
+            "password", "TestPassword1!"
+        );
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+               .andExpect(status().isOk())
+               .andReturn();
+
+        String accessToken1 = objectMapper.readTree(loginResult.getResponse().getContentAsString())
+                .get("accessToken").asText();
+
+        // Extract refresh token from cookie
+        Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
+        assertThat(refreshCookie).isNotNull();
+
+        // Refresh tokens now include a UUID jti, so no sleep needed for uniqueness
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                .cookie(refreshCookie))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.accessToken").isNotEmpty())
+               .andReturn();
+
+        String accessToken2 = objectMapper.readTree(refreshResult.getResponse().getContentAsString())
+                .get("accessToken").asText();
+
+        // New access token must be different from the old one
+        assertThat(accessToken2).isNotEqualTo(accessToken1);
     }
 
     @Test
@@ -112,7 +164,6 @@ class AuthApiTest {
         Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
         assertThat(refreshCookie).isNotNull();
 
-        // Refresh tokens now include a UUID jti, so no sleep needed for uniqueness
         // Use refresh token to get new access token
         mockMvc.perform(post("/api/auth/refresh")
                 .cookie(refreshCookie))
@@ -194,12 +245,13 @@ class AuthApiTest {
             "newPassword", "NewSecurePass2@"
         );
 
+        // Wrong old password → BusinessRuleException("Current password is incorrect") → 409
         mockMvc.perform(post("/api/auth/change-password")
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(changeRequest))
                 .header("Authorization", "Bearer " + accessToken))
-               .andExpect(status().is4xxClientError());
+               .andExpect(status().isConflict());
     }
 
     @Test
@@ -211,12 +263,13 @@ class AuthApiTest {
             "newPassword", "weak"
         );
 
+        // Weak new password → BusinessRuleException("Password must be...") → 409
         mockMvc.perform(post("/api/auth/change-password")
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(changeRequest))
                 .header("Authorization", "Bearer " + accessToken))
-               .andExpect(status().is4xxClientError());
+               .andExpect(status().isConflict());
     }
 
     @Test
@@ -231,9 +284,8 @@ class AuthApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(changeRequest)))
                .andReturn().getResponse().getStatus();
-        // Without a valid JWT, request is either rejected by security (403) or
-        // the controller throws when authentication is null (500)
-        assertThat(statusCode).isNotIn(200, 201);
+        // Without a valid JWT, request is rejected by the security filter → 401
+        assertThat(statusCode).isIn(401, 403);
     }
 
     @Test

@@ -37,26 +37,31 @@ public class CatalogService {
     private final SearchClickLogRepository searchClickLogRepository;
     private final SearchService searchService;
     private final RankingService rankingService;
+    private final FullTextSearchHelper fullTextSearchHelper;
 
     public CatalogService(RecyclingItemRepository recyclingItemRepository,
                           ItemFingerprintRepository itemFingerprintRepository,
                           SearchLogRepository searchLogRepository,
                           SearchClickLogRepository searchClickLogRepository,
                           SearchService searchService,
-                          RankingService rankingService) {
+                          RankingService rankingService,
+                          FullTextSearchHelper fullTextSearchHelper) {
         this.recyclingItemRepository = recyclingItemRepository;
         this.itemFingerprintRepository = itemFingerprintRepository;
         this.searchLogRepository = searchLogRepository;
         this.searchClickLogRepository = searchClickLogRepository;
         this.searchService = searchService;
         this.rankingService = rankingService;
+        this.fullTextSearchHelper = fullTextSearchHelper;
     }
 
     public SearchResult searchItems(String keyword, String category, String condition,
                                      BigDecimal minPrice, BigDecimal maxPrice, Long userId) {
         List<RecyclingItem> results;
         try {
-            results = recyclingItemRepository.searchItemsFullText(keyword, category, condition, minPrice, maxPrice);
+            // Use REQUIRES_NEW helper so a full-text failure does not mark the outer transaction
+            // as rollback-only (relevant when running against H2 which lacks MATCH/AGAINST).
+            results = fullTextSearchHelper.searchFullText(keyword, category, condition, minPrice, maxPrice);
         } catch (Exception e) {
             // Fallback to LIKE search (H2 or when full-text index not available)
             results = recyclingItemRepository.searchItems(keyword, category, condition, minPrice, maxPrice);
