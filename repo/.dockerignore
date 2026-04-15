@@ -1,14 +1,6 @@
-# target/ is NOT excluded — Docker needs target/*.jar (the pre-built fat JAR).
-# Exclude only heavy build artifacts we don't need in the image:
-target/classes/
-target/test-classes/
-target/surefire-reports/
-target/site/
-target/generated-sources/
-target/generated-test-sources/
-target/maven-archiver/
-target/maven-status/
-target/*.jar.original
+# The JAR is built inside Docker (multi-stage) — exclude host-side build output
+# so a local ./mvnw package doesn't leak into the image context.
+target/
 *.log
 .idea/
 .vscode/
